@@ -18,6 +18,7 @@ export interface Config {
   mfaArn: string;
   roleArn: string;
   duration: number;
+  mfaMode?: "code" | "command";
   mfaCommand?: string;
 }
 

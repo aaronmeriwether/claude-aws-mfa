@@ -67,7 +67,7 @@ export function showDialog(defaults: Partial<Config>): DialogResult | null {
     roleArn: defaults.roleArn ?? "",
     duration: String(defaults.duration ?? 43200),
     mfaCommand: defaults.mfaCommand ?? "",
-    mfaMode: defaults.mfaCommand ? "command" : "code",
+    mfaMode: defaults.mfaMode ?? "code",
   }));
 
   webview.run();

@@ -40,6 +40,7 @@ try {
     mfaArn: result.mfaArn,
     roleArn: result.roleArn,
     duration,
+    mfaMode: result.mfaMode,
     mfaCommand: result.mfaCommand || undefined,
   });
 
