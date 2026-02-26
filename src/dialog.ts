@@ -2,6 +2,7 @@ import { Webview, SizeHint } from "webview-bun";
 import { lib } from "webview-bun/src/ffi";
 import type { Config } from "./config";
 import { buildHtml } from "./dialog-html";
+import { version } from "../package.json";
 
 export interface DialogResult {
   region: string;
@@ -35,7 +36,7 @@ export function showDialog(defaults: Partial<Config>): DialogResult | null {
     height: 670,
     hint: SizeHint.FIXED,
   });
-  webview.title = "Claude AWS MFA";
+  webview.title = `Claude AWS MFA v${version}`;
 
   let result: DialogResult | null = null;
 
