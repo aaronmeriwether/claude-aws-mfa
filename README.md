@@ -26,6 +26,16 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
 }
 ```
 
+If you have an existing `~/.aws/credentials` file, you will likely need to suppress Claude's use of that file so it will correctly invoke the `awsCredentialExport` tool instead.
+
+```json
+{
+  "env": {
+    "AWS_SHARED_CREDENTIALS_FILE": "/dev/null"
+  }
+}
+```
+
 ## How it works
 
 1. On first run, seeds the dialog with credentials from your existing AWS config (`~/.aws/credentials`, environment variables, SSO, etc.)
