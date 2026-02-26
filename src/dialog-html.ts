@@ -41,12 +41,13 @@ export function buildHtml(config: Record<string, string>) {
   button.primary { background: #0071e3; color: #fff; border-color: #0071e3; }
   button:hover { filter: brightness(0.95); }
   hr { border: none; border-top: 1px solid #d2d2d7; margin: 16px 0; }
-  .radio-group { display: flex; gap: 16px; margin-bottom: 12px; }
-  .radio-group label {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 500; color: #1d1d1f; cursor: pointer;
+  .radio-field { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .radio-field input[type="radio"] { margin: 0; flex-shrink: 0; }
+  .radio-field label {
+    display: inline; font-size: 12px; font-weight: 500; color: #6e6e73;
+    margin-bottom: 0; white-space: nowrap; cursor: pointer;
   }
-  .radio-group input[type="radio"] { margin: 0; }
+  .radio-field input[type="text"] { flex: 1; }
   input:disabled { background: #f0f0f0; color: #999; cursor: not-allowed; }
 </style>
 </head>
@@ -59,12 +60,16 @@ export function buildHtml(config: Record<string, string>) {
   <div class="field"><label>Role ARN</label><input id="roleArn" placeholder="arn:aws:iam::123456789012:role/MyRole"></div>
   <div class="field"><label>Session Duration (seconds)</label><input id="duration" placeholder="43200"></div>
   <hr>
-  <div class="radio-group">
-    <label><input type="radio" name="mfaMode" id="mfaModeCode" value="code" checked> MFA Code</label>
-    <label><input type="radio" name="mfaMode" id="mfaModeCommand" value="command"> MFA Command</label>
+  <div class="radio-field">
+    <input type="radio" name="mfaMode" id="mfaModeCode" value="code" checked>
+    <label for="mfaModeCode">MFA Code</label>
+    <input type="text" id="mfaCode" placeholder="123456">
   </div>
-  <div class="field"><label>MFA Code</label><input id="mfaCode" placeholder="123456"></div>
-  <div class="field"><label>MFA Command</label><input id="mfaCommand" placeholder="op item get --otp ..." disabled></div>
+  <div class="radio-field">
+    <input type="radio" name="mfaMode" id="mfaModeCommand" value="command">
+    <label for="mfaModeCommand">MFA Command</label>
+    <input type="text" id="mfaCommand" placeholder="op item get --otp ..." disabled>
+  </div>
   <div class="buttons">
     <button onclick="_cancel()">Cancel</button>
     <button class="primary" onclick="submit()">OK</button>

@@ -32,7 +32,7 @@ function clipboardCommand(): string[] {
 export function showDialog(defaults: Partial<Config>): DialogResult | null {
   const webview = new Webview(false, {
     width: 440,
-    height: 710,
+    height: 670,
     hint: SizeHint.FIXED,
   });
   webview.title = "Claude AWS MFA";
