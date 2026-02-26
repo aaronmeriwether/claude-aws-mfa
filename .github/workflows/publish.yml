@@ -14,6 +14,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate release tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          IS_PRERELEASE="${{ github.event.release.prerelease }}"
+
+          # Must start with "v"
+          if [[ "$TAG" != v* ]]; then
+            echo "::error::Tag must start with 'v' (got '$TAG')"
+            exit 1
+          fi
+
+          VERSION="${TAG#v}"
+
+          # Must be valid semver (X.Y.Z or X.Y.Z-prerelease)
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9._-]+)?$ ]]; then
+            echo "::error::Tag must be a valid semver with a 'v' prefix (got '$TAG')"
+            exit 1
+          fi
+
+          HAS_PRERELEASE_SUFFIX="false"
+          if [[ "$VERSION" =~ - ]]; then
+            HAS_PRERELEASE_SUFFIX="true"
+          fi
+
+          # Prerelease checkbox must match tag format
+          if [ "$IS_PRERELEASE" = "true" ] && [ "$HAS_PRERELEASE_SUFFIX" = "false" ]; then
+            echo "::error::Release is marked as prerelease but tag '$TAG' has no prerelease suffix (e.g. v1.0.0-beta.1)"
+            exit 1
+          fi
+
+          if [ "$IS_PRERELEASE" = "false" ] && [ "$HAS_PRERELEASE_SUFFIX" = "true" ]; then
+            echo "::error::Tag '$TAG' has a prerelease suffix but release is not marked as prerelease"
+            exit 1
+          fi
+
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -22,11 +59,20 @@ jobs:
 
       - run: bun test
 
+      - name: Set package version from release tag
+        run: npm version "$VERSION" --no-git-tag-version
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
-      - run: npm publish --provenance --access public
+      - name: Publish to npm
+        run: |
+          TAG="latest"
+          if [ "${{ github.event.release.prerelease }}" = "true" ]; then
+            TAG="next"
+          fi
+          npm publish --provenance --access public --tag "$TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
