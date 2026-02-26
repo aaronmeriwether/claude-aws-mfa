@@ -13,6 +13,20 @@ export interface DialogResult {
   mfaCode: string;
 }
 
+/** Build the clipboard-read command with absolute paths where possible. */
+function clipboardCommand(): string[] {
+  if (process.platform === "darwin") {
+    return ["/usr/bin/pbpaste"];
+  }
+  if (process.platform === "win32") {
+    // Construct absolute path to powershell.exe from the system root.
+    const root = process.env.SystemRoot ?? "C:\\Windows";
+    return [`${root}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`, "-Command", "Get-Clipboard"];
+  }
+  // Linux — xclip path is not standardised; rely on PATH here.
+  return ["xclip", "-selection", "clipboard", "-o"];
+}
+
 export function showDialog(defaults: Partial<Config>): DialogResult | null {
   const webview = new Webview(false, {
     width: 440,
@@ -34,15 +48,12 @@ export function showDialog(defaults: Partial<Config>): DialogResult | null {
 
   webview.bind("_cancel", () => lib.symbols.webview_terminate(handle));
 
-  // Webview doesn't support Cmd/Ctrl+V natively — read clipboard from Bun side.
+  // Fallback clipboard reader: spawn a platform-specific helper.
+  // The HTML-side paste handler tries navigator.clipboard.readText() first
+  // (no external process needed) and only calls _paste() if that fails.
+  const cmd = clipboardCommand();
   webview.bind("_paste", () => {
-    const proc = Bun.spawnSync(
-      process.platform === "darwin"
-        ? ["pbpaste"]
-        : process.platform === "win32"
-          ? ["powershell", "-Command", "Get-Clipboard"]
-          : ["xclip", "-selection", "clipboard", "-o"]
-    );
+    const proc = Bun.spawnSync(cmd);
     return proc.stdout.toString();
   });
 

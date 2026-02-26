@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { mkdtempSync, readFileSync, writeFileSync, rmSync, statSync } from "fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, statSync, openSync, closeSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 
@@ -63,5 +63,46 @@ describe("config file I/O", () => {
     } catch {
       // Expected — loadConfig wraps this in try/catch and returns null
     }
+  });
+});
+
+describe("config file permissions", () => {
+  test("file created with openSync mode 0o600 has correct permissions", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "claude-aws-mfa-perms-"));
+    const path = join(tmp, "creds.json");
+
+    const fd = openSync(path, "w", 0o600);
+    closeSync(fd);
+    writeFileSync(path, '{"test":true}\n');
+
+    const perms = statSync(path).mode & 0o777;
+    expect(perms).toBe(0o600);
+
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test("directory created with mkdirSync mode 0o700 has correct permissions", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "claude-aws-mfa-dir-"));
+    const dir = join(tmp, "subdir");
+
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    const perms = statSync(dir).mode & 0o777;
+    expect(perms).toBe(0o700);
+
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test("chmodSync can fix overly-permissive file", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "claude-aws-mfa-fix-"));
+    const path = join(tmp, "creds.json");
+
+    writeFileSync(path, '{"test":true}\n');
+    chmodSync(path, 0o644);
+    expect(statSync(path).mode & 0o777).toBe(0o644);
+
+    chmodSync(path, 0o600);
+    expect(statSync(path).mode & 0o777).toBe(0o600);
+
+    rmSync(tmp, { recursive: true, force: true });
   });
 });

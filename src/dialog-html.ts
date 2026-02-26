@@ -1,5 +1,15 @@
 export const FIELDS = ["region", "accessKeyId", "secretAccessKey", "mfaArn", "roleArn", "duration", "mfaCode"] as const;
 
+export const FIELD_PATTERNS: Record<string, string> = {
+  region: "^[a-z]{2}(-[a-z]+-\\d+)$",
+  accessKeyId: "^(AKIA|ASIA)[A-Z0-9]{16}$",
+  secretAccessKey: "^[A-Za-z0-9/+=]{40}$",
+  mfaArn: "^arn:aws:iam::\\d{12}:mfa/.+$",
+  roleArn: "^arn:aws:iam::\\d{12}:role/.+$",
+  duration: "^[1-9]\\d*$",
+  mfaCode: "^\\d{6}$",
+};
+
 export function buildHtml(config: Record<string, string>) {
   return /*html*/ `<!DOCTYPE html>
 <html>
@@ -13,7 +23,10 @@ export function buildHtml(config: Record<string, string>) {
   }
   h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
   .field { margin-bottom: 12px; }
-  label { display: block; font-size: 12px; font-weight: 500; color: #6e6e73; margin-bottom: 4px; }
+  label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; transition: color 0.15s; }
+  label.valid { color: #1d1d1f; }
+  label.invalid { color: #ff3b30; }
+  label.empty { color: #6e6e73; }
   input {
     width: 100%; padding: 8px 10px; border: 1px solid #d2d2d7;
     border-radius: 6px; font-size: 14px; background: #fff; outline: none;
@@ -45,9 +58,29 @@ export function buildHtml(config: Record<string, string>) {
   </div>
   <script>
     const FIELDS = ${JSON.stringify(FIELDS)};
+    const PATTERNS = ${JSON.stringify(FIELD_PATTERNS)};
     const config = ${JSON.stringify(config)};
+
     for (const [k, v] of Object.entries(config))
       if (document.getElementById(k)) document.getElementById(k).value = v;
+
+    function validateField(id) {
+      const input = document.getElementById(id);
+      const label = input.parentElement.querySelector("label");
+      const pattern = PATTERNS[id];
+      if (!pattern) { label.className = "empty"; return; }
+      if (!input.value) { label.className = "empty"; return; }
+      label.className = new RegExp(pattern).test(input.value) ? "valid" : "invalid";
+    }
+
+    for (const id of FIELDS) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener("input", () => validateField(id));
+        validateField(id);
+      }
+    }
+
     document.getElementById("mfaCode").focus();
 
     function submit() {
@@ -56,17 +89,27 @@ export function buildHtml(config: Record<string, string>) {
       )));
     }
 
+    // Try the browser Clipboard API first (no external process needed).
+    // Falls back to _paste() which spawns a platform helper on the Bun side.
+    async function readClipboard() {
+      try {
+        if (navigator.clipboard?.readText) return await navigator.clipboard.readText();
+      } catch {}
+      return await _paste();
+    }
+
     document.addEventListener("keydown", async e => {
       if (e.key === "Enter") return submit();
       if (e.key === "Escape") return _cancel();
       if ((e.metaKey || e.ctrlKey) && e.key === "v") {
         e.preventDefault();
-        const text = await _paste();
+        const text = await readClipboard();
         const el = document.activeElement;
         if (el?.tagName === "INPUT") {
           const start = el.selectionStart, end = el.selectionEnd;
           el.value = el.value.slice(0, start) + text + el.value.slice(end);
           el.selectionStart = el.selectionEnd = start + text.length;
+          el.dispatchEvent(new Event("input"));
         }
       }
     });

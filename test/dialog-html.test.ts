@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { buildHtml, FIELDS } from "../src/dialog-html";
+import { buildHtml, FIELDS, FIELD_PATTERNS } from "../src/dialog-html";
 
 describe("buildHtml", () => {
   const config = {
@@ -73,5 +73,56 @@ describe("buildHtml", () => {
       "region", "accessKeyId", "secretAccessKey",
       "mfaArn", "roleArn", "duration", "mfaCode",
     ]);
+  });
+
+  test("embeds FIELD_PATTERNS as JSON in script for validation", () => {
+    const html = buildHtml(config);
+    expect(html).toContain(JSON.stringify(FIELD_PATTERNS));
+    expect(html).toContain("validateField");
+  });
+
+  test("FIELD_PATTERNS has a pattern for every field", () => {
+    for (const field of FIELDS) {
+      expect(FIELD_PATTERNS).toHaveProperty(field);
+    }
+  });
+
+  test("FIELD_PATTERNS are valid regexes that match expected formats", () => {
+    const valid: Record<string, string> = {
+      region: "us-east-1",
+      accessKeyId: "AKIAIOSFODNN7EXAMPLE",
+      secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      mfaArn: "arn:aws:iam::123456789012:mfa/user",
+      roleArn: "arn:aws:iam::123456789012:role/TestRole",
+      duration: "43200",
+      mfaCode: "123456",
+    };
+    const invalid: Record<string, string> = {
+      region: "INVALID",
+      accessKeyId: "BADKEY",
+      secretAccessKey: "short",
+      mfaArn: "not-an-arn",
+      roleArn: "not-an-arn",
+      duration: "abc",
+      mfaCode: "12",
+    };
+    for (const field of FIELDS) {
+      const re = new RegExp(FIELD_PATTERNS[field]);
+      expect(re.test(valid[field])).toBe(true);
+      expect(re.test(invalid[field])).toBe(false);
+    }
+  });
+
+  test("has readClipboard function with navigator.clipboard fallback", () => {
+    const html = buildHtml(config);
+    expect(html).toContain("readClipboard");
+    expect(html).toContain("navigator.clipboard");
+  });
+
+  test("has validation CSS classes", () => {
+    const html = buildHtml(config);
+    expect(html).toContain("label.valid");
+    expect(html).toContain("label.invalid");
+    expect(html).toContain("label.empty");
   });
 });

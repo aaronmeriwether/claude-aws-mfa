@@ -1,0 +1,3 @@
+[install]
+# Reject packages published less than 3 days ago to guard against supply-chain attacks.
+minimumReleaseAge = 259200
