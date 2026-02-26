@@ -29,13 +29,14 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
 ## How it works
 
 1. On first run, seeds the dialog with credentials from your existing AWS config (`~/.aws/credentials`, environment variables, SSO, etc.)
-2. Shows a native GUI dialog with fields for region, access key, secret key, MFA ARN, role ARN, session duration, and MFA code
-3. Calls `sts:AssumeRole` with the MFA token
-4. If the requested session duration is rejected, automatically retries with shorter durations (12h → 6h → 2h → 1h)
-5. Saves configuration to `~/.config/claude-aws-mfa.json` (mode 0600) for subsequent runs
-6. Outputs temporary credentials as JSON to stdout
+2. Shows a native GUI dialog with fields for region, access key, secret key, MFA ARN, role ARN, and session duration
+3. Collects the MFA token — either type a 6-digit code directly, or switch to **MFA Command** mode and provide a shell command that outputs the code (e.g. `op item get --otp …` for 1Password CLI)
+4. Calls `sts:AssumeRole` with the MFA token
+5. If the requested session duration is rejected, automatically retries with shorter durations (12h → 6h → 2h → 1h)
+6. Saves configuration (including MFA mode and command) to `~/.config/claude-aws-mfa.json` (mode 0600) for subsequent runs
+7. Outputs temporary credentials as JSON to stdout
 
-On subsequent runs, all fields are pre-populated from the saved config — just enter a fresh MFA code and hit OK.
+On subsequent runs, all fields are pre-populated from the saved config — just enter a fresh MFA code and hit OK. If you use the command mode, the TOTP code is fetched automatically so no manual entry is needed at all.
 
 ## System requirements
 
