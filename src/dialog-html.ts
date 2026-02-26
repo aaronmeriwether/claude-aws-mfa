@@ -75,6 +75,12 @@ export function buildHtml(config: Record<string, string>) {
     <button class="primary" onclick="submit()">OK</button>
   </div>
   <script>
+    document.querySelectorAll("input").forEach(el => {
+      el.setAttribute("autocorrect", "off");
+      el.setAttribute("autocomplete", "off");
+      el.setAttribute("autocapitalize", "off");
+      el.setAttribute("spellcheck", "false");
+    });
     const FIELDS = ${JSON.stringify(FIELDS)};
     const PATTERNS = ${JSON.stringify(FIELD_PATTERNS)};
     const config = ${JSON.stringify(config)};
