@@ -42,7 +42,7 @@ export function buildHtml(config: Record<string, string>) {
   button:hover { filter: brightness(0.95); }
   hr { border: none; border-top: 1px solid #d2d2d7; margin: 16px 0; }
   .radio-field { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-  .radio-field input[type="radio"] { margin: 0; flex-shrink: 0; }
+  .radio-field input[type="radio"] { margin: 0; flex-shrink: 0; width: auto; }
   .radio-field label {
     display: inline; font-size: 12px; font-weight: 500; color: #6e6e73;
     margin-bottom: 0; white-space: nowrap; cursor: pointer;
