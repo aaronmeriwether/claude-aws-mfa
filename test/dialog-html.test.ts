@@ -20,6 +20,11 @@ describe("buildHtml", () => {
   test("contains all form fields", () => {
     const html = buildHtml(config);
     for (const field of FIELDS) {
+      if (field === "mfaMode") {
+        // mfaMode is represented by radio buttons, not a single input
+        expect(html).toContain('name="mfaMode"');
+        continue;
+      }
       expect(html).toContain(`id="${field}"`);
     }
   });
@@ -71,7 +76,7 @@ describe("buildHtml", () => {
   test("FIELDS list matches expected form fields", () => {
     expect(FIELDS).toEqual([
       "region", "accessKeyId", "secretAccessKey",
-      "mfaArn", "roleArn", "duration", "mfaCode",
+      "mfaArn", "roleArn", "duration", "mfaMode", "mfaCode", "mfaCommand",
     ]);
   });
 
@@ -81,8 +86,9 @@ describe("buildHtml", () => {
     expect(html).toContain("validateField");
   });
 
-  test("FIELD_PATTERNS has a pattern for every field", () => {
+  test("FIELD_PATTERNS has a pattern for every validatable field", () => {
     for (const field of FIELDS) {
+      if (field === "mfaMode") continue; // radio button, not validated by pattern
       expect(FIELD_PATTERNS).toHaveProperty(field);
     }
   });
@@ -96,6 +102,7 @@ describe("buildHtml", () => {
       roleArn: "arn:aws:iam::123456789012:role/TestRole",
       duration: "43200",
       mfaCode: "123456",
+      mfaCommand: "op item get --otp myitem",
     };
     const invalid: Record<string, string> = {
       region: "INVALID",
@@ -105,8 +112,10 @@ describe("buildHtml", () => {
       roleArn: "not-an-arn",
       duration: "abc",
       mfaCode: "12",
+      mfaCommand: "",
     };
     for (const field of FIELDS) {
+      if (field === "mfaMode") continue;
       const re = new RegExp(FIELD_PATTERNS[field]);
       expect(re.test(valid[field])).toBe(true);
       expect(re.test(invalid[field])).toBe(false);
@@ -124,5 +133,31 @@ describe("buildHtml", () => {
     expect(html).toContain("label.valid");
     expect(html).toContain("label.invalid");
     expect(html).toContain("label.empty");
+  });
+
+  test("has MFA mode radio buttons", () => {
+    const html = buildHtml(config);
+    expect(html).toContain('id="mfaModeCode"');
+    expect(html).toContain('id="mfaModeCommand"');
+    expect(html).toContain('type="radio"');
+    expect(html).toContain('name="mfaMode"');
+  });
+
+  test("has MFA command input field", () => {
+    const html = buildHtml(config);
+    expect(html).toContain('id="mfaCommand"');
+  });
+
+  test("MFA command field is disabled by default", () => {
+    const html = buildHtml(config);
+    expect(html).toContain('id="mfaCommand"');
+    // The field starts disabled when mfaMode is not "command"
+    expect(html).toContain("setMfaMode");
+  });
+
+  test("validation skips inactive MFA field", () => {
+    const html = buildHtml(config);
+    // The validateField function checks currentMode() to skip inactive fields
+    expect(html).toContain("currentMode()");
   });
 });

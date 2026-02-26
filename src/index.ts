@@ -13,13 +13,23 @@ if (!result) {
 }
 
 try {
+  let mfaCode = result.mfaCode;
+  if (result.mfaMode === "command") {
+    const proc = Bun.spawnSync(["sh", "-c", result.mfaCommand]);
+    if (proc.exitCode !== 0) {
+      process.stderr.write(`MFA command failed: ${proc.stderr.toString()}\n`);
+      process.exit(2);
+    }
+    mfaCode = proc.stdout.toString().trim();
+  }
+
   const { credentials, duration } = await assumeRoleWithMfa({
     region: result.region,
     accessKeyId: result.accessKeyId,
     secretAccessKey: result.secretAccessKey,
     mfaArn: result.mfaArn,
     roleArn: result.roleArn,
-    mfaCode: result.mfaCode,
+    mfaCode,
     duration: parseInt(result.duration, 10) || 43200,
   });
 
@@ -30,6 +40,7 @@ try {
     mfaArn: result.mfaArn,
     roleArn: result.roleArn,
     duration,
+    mfaCommand: result.mfaCommand || undefined,
   });
 
   console.log(JSON.stringify({ Credentials: credentials }));

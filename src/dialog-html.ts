@@ -1,4 +1,4 @@
-export const FIELDS = ["region", "accessKeyId", "secretAccessKey", "mfaArn", "roleArn", "duration", "mfaCode"] as const;
+export const FIELDS = ["region", "accessKeyId", "secretAccessKey", "mfaArn", "roleArn", "duration", "mfaMode", "mfaCode", "mfaCommand"] as const;
 
 export const FIELD_PATTERNS: Record<string, string> = {
   region: "^[a-z]{2}(-[a-z]+-\\d+)$",
@@ -8,6 +8,7 @@ export const FIELD_PATTERNS: Record<string, string> = {
   roleArn: "^arn:aws:iam::\\d{12}:role/.+$",
   duration: "^[1-9]\\d*$",
   mfaCode: "^\\d{6}$",
+  mfaCommand: "^.+$",
 };
 
 export function buildHtml(config: Record<string, string>) {
@@ -40,6 +41,13 @@ export function buildHtml(config: Record<string, string>) {
   button.primary { background: #0071e3; color: #fff; border-color: #0071e3; }
   button:hover { filter: brightness(0.95); }
   hr { border: none; border-top: 1px solid #d2d2d7; margin: 16px 0; }
+  .radio-group { display: flex; gap: 16px; margin-bottom: 12px; }
+  .radio-group label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 500; color: #1d1d1f; cursor: pointer;
+  }
+  .radio-group input[type="radio"] { margin: 0; }
+  input:disabled { background: #f0f0f0; color: #999; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -51,7 +59,12 @@ export function buildHtml(config: Record<string, string>) {
   <div class="field"><label>Role ARN</label><input id="roleArn" placeholder="arn:aws:iam::123456789012:role/MyRole"></div>
   <div class="field"><label>Session Duration (seconds)</label><input id="duration" placeholder="43200"></div>
   <hr>
+  <div class="radio-group">
+    <label><input type="radio" name="mfaMode" id="mfaModeCode" value="code" checked> MFA Code</label>
+    <label><input type="radio" name="mfaMode" id="mfaModeCommand" value="command"> MFA Command</label>
+  </div>
   <div class="field"><label>MFA Code</label><input id="mfaCode" placeholder="123456"></div>
+  <div class="field"><label>MFA Command</label><input id="mfaCommand" placeholder="op item get --otp ..." disabled></div>
   <div class="buttons">
     <button onclick="_cancel()">Cancel</button>
     <button class="primary" onclick="submit()">OK</button>
@@ -64,11 +77,18 @@ export function buildHtml(config: Record<string, string>) {
     for (const [k, v] of Object.entries(config))
       if (document.getElementById(k)) document.getElementById(k).value = v;
 
+    function currentMode() {
+      return document.querySelector('input[name="mfaMode"]:checked').value;
+    }
+
     function validateField(id) {
       const input = document.getElementById(id);
       const label = input.parentElement.querySelector("label");
       const pattern = PATTERNS[id];
       if (!pattern) { label.className = "empty"; return; }
+      // Only validate the active MFA field
+      if (id === "mfaCode" && currentMode() !== "code") { label.className = "empty"; return; }
+      if (id === "mfaCommand" && currentMode() !== "command") { label.className = "empty"; return; }
       if (!input.value) { label.className = "empty"; return; }
       label.className = new RegExp(pattern).test(input.value) ? "valid" : "invalid";
     }
@@ -81,12 +101,39 @@ export function buildHtml(config: Record<string, string>) {
       }
     }
 
-    document.getElementById("mfaCode").focus();
+    function setMfaMode(mode) {
+      const codeEl = document.getElementById("mfaCode");
+      const cmdEl = document.getElementById("mfaCommand");
+      if (mode === "command") {
+        document.getElementById("mfaModeCommand").checked = true;
+        codeEl.disabled = true;
+        cmdEl.disabled = false;
+        cmdEl.focus();
+      } else {
+        document.getElementById("mfaModeCode").checked = true;
+        codeEl.disabled = false;
+        cmdEl.disabled = true;
+        codeEl.focus();
+      }
+      validateField("mfaCode");
+      validateField("mfaCommand");
+    }
+
+    document.getElementById("mfaModeCode").addEventListener("change", () => setMfaMode("code"));
+    document.getElementById("mfaModeCommand").addEventListener("change", () => setMfaMode("command"));
+
+    // Initialize mode from config (default to "code")
+    setMfaMode(config.mfaMode === "command" ? "command" : "code");
 
     function submit() {
-      _submit(JSON.stringify(Object.fromEntries(
-        FIELDS.map(id => [id, document.getElementById(id).value])
-      )));
+      const mode = currentMode();
+      const data = Object.fromEntries(
+        FIELDS.map(id => {
+          if (id === "mfaMode") return [id, mode];
+          return [id, document.getElementById(id).value];
+        })
+      );
+      _submit(JSON.stringify(data));
     }
 
     // Try the browser Clipboard API first (no external process needed).

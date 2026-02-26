@@ -28,6 +28,20 @@ describe("config serialization", () => {
     }
   });
 
+  test("supports optional mfaCommand field", () => {
+    const configWithCmd = { ...config, mfaCommand: "op item get --otp myitem" };
+    const json = JSON.stringify(configWithCmd, null, 2) + "\n";
+    const parsed = JSON.parse(json);
+    expect(parsed.mfaCommand).toBe("op item get --otp myitem");
+  });
+
+  test("mfaCommand is optional (absent is valid)", () => {
+    expect(config).not.toHaveProperty("mfaCommand");
+    const json = JSON.stringify(config, null, 2) + "\n";
+    const parsed = JSON.parse(json);
+    expect(parsed.mfaCommand).toBeUndefined();
+  });
+
   test("duration is a number", () => {
     expect(typeof config.duration).toBe("number");
   });

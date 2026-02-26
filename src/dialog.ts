@@ -10,7 +10,9 @@ export interface DialogResult {
   mfaArn: string;
   roleArn: string;
   duration: string;
+  mfaMode: "code" | "command";
   mfaCode: string;
+  mfaCommand: string;
 }
 
 /** Build the clipboard-read command with absolute paths where possible. */
@@ -30,7 +32,7 @@ function clipboardCommand(): string[] {
 export function showDialog(defaults: Partial<Config>): DialogResult | null {
   const webview = new Webview(false, {
     width: 440,
-    height: 620,
+    height: 710,
     hint: SizeHint.FIXED,
   });
   webview.title = "Claude AWS MFA";
@@ -64,6 +66,8 @@ export function showDialog(defaults: Partial<Config>): DialogResult | null {
     mfaArn: defaults.mfaArn ?? "",
     roleArn: defaults.roleArn ?? "",
     duration: String(defaults.duration ?? 43200),
+    mfaCommand: defaults.mfaCommand ?? "",
+    mfaMode: defaults.mfaCommand ? "command" : "code",
   }));
 
   webview.run();

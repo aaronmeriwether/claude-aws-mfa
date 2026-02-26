@@ -18,6 +18,7 @@ export interface Config {
   mfaArn: string;
   roleArn: string;
   duration: number;
+  mfaCommand?: string;
 }
 
 const CONFIG_PATH = join(homedir(), ".config", "claude-aws-mfa.json");
