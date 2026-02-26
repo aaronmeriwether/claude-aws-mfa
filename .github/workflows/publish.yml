@@ -64,7 +64,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org
 
       - name: Publish to npm
@@ -73,6 +73,4 @@ jobs:
           if [ "${{ github.event.release.prerelease }}" = "true" ]; then
             TAG="next"
           fi
-          npm publish --provenance --access public --tag "$TAG"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          npm publish --access public --tag "$TAG"
