@@ -47,7 +47,7 @@ export function buildHtml(config: Record<string, string>) {
     display: inline; font-size: 12px; font-weight: 500; color: #6e6e73;
     margin-bottom: 0; white-space: nowrap; cursor: pointer;
   }
-  .radio-field input[type="text"] { flex: 1; }
+  .radio-field input[type="text"] { flex: 1; width: 0; min-width: 0; }
   input:disabled { background: #f0f0f0; color: #999; cursor: not-allowed; }
 </style>
 </head>
