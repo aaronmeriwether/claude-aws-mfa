@@ -2,6 +2,7 @@
   "name": "claude-aws-mfa",
   "version": "0.0.0",
   "type": "module",
+  "repository": "https://github.com/p120ph37/claude-aws-mfa",
   "bin": {
     "claude-aws-mfa": "./src/index.ts"
   },
