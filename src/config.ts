@@ -22,6 +22,9 @@ export interface Config {
 
 const CONFIG_PATH = join(homedir(), ".config", "claude-aws-mfa.json");
 
+// Unix file-permission enforcement is skipped on Windows where chmod is a no-op.
+const IS_UNIX = process.platform !== "win32";
+
 /** Ensure the parent directory exists with 0700 permissions. */
 function ensureConfigDir(): void {
   const dir = dirname(CONFIG_PATH);
@@ -32,16 +35,16 @@ function ensureConfigDir(): void {
       throw new Error(`Cannot create config directory ${dir}: ${err.message}`);
     }
   }
-  // Verify or fix directory permissions
-  const st = statSync(dir);
-  const dirPerms = st.mode & 0o777;
-  if (dirPerms !== 0o700) {
-    try {
-      chmodSync(dir, 0o700);
-    } catch {
-      throw new Error(
-        `Config directory ${dir} has permissions ${dirPerms.toString(8)} and cannot be fixed — aborting to protect credentials.`,
-      );
+  if (IS_UNIX) {
+    const dirPerms = statSync(dir).mode & 0o777;
+    if (dirPerms !== 0o700) {
+      try {
+        chmodSync(dir, 0o700);
+      } catch {
+        throw new Error(
+          `Config directory ${dir} has permissions ${dirPerms.toString(8)} and cannot be fixed — aborting to protect credentials.`,
+        );
+      }
     }
   }
 }
@@ -51,18 +54,21 @@ function ensureConfigDir(): void {
  * Attempts to fix permissions if incorrect.
  * Throws if the file has bad permissions and they cannot be corrected.
  * Returns false if the file does not exist yet.
+ * On Windows, permission checks are skipped (NTFS uses ACLs, not mode bits).
  */
 function validateConfigPermissions(): boolean {
   try {
     const st = statSync(CONFIG_PATH);
-    const perms = st.mode & 0o777;
-    if (perms !== 0o600) {
-      try {
-        chmodSync(CONFIG_PATH, 0o600);
-      } catch {
-        throw new Error(
-          `Config file ${CONFIG_PATH} has permissions ${perms.toString(8)} and cannot be fixed — aborting to protect credentials.`,
-        );
+    if (IS_UNIX) {
+      const perms = st.mode & 0o777;
+      if (perms !== 0o600) {
+        try {
+          chmodSync(CONFIG_PATH, 0o600);
+        } catch {
+          throw new Error(
+            `Config file ${CONFIG_PATH} has permissions ${perms.toString(8)} and cannot be fixed — aborting to protect credentials.`,
+          );
+        }
       }
     }
     return true;

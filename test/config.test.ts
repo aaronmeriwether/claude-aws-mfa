@@ -66,7 +66,10 @@ describe("config file I/O", () => {
   });
 });
 
-describe("config file permissions", () => {
+const isWindows = process.platform === "win32";
+
+// Unix file-permission semantics don't apply on Windows.
+describe.skipIf(isWindows)("config file permissions", () => {
   test("file created with openSync mode 0o600 has correct permissions", () => {
     const tmp = mkdtempSync(join(tmpdir(), "claude-aws-mfa-perms-"));
     const path = join(tmp, "creds.json");
