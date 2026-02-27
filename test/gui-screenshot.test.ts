@@ -92,21 +92,26 @@ describe.skipIf(!process.env.GUI_TEST)("GUI screenshot tests", () => {
   test("window content is non-uniform", async () => {
     expect(foundWindow).not.toBeNull();
 
-    const image = foundWindow!.captureImageSync();
-    const width = image.width;
-    const height = image.height;
-    const rgba = image.toRawSync();
+    // Poll for rendered content (webview may take a few seconds to paint)
+    let uniqueColors = 0;
+    let image: ReturnType<typeof foundWindow!.captureImageSync>;
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
+      image = foundWindow!.captureImageSync();
+      const rgba = image.toRawSync();
+      uniqueColors = countCenterColors(rgba, image.width, image.height);
+      if (uniqueColors > 5) break;
+      await Bun.sleep(500);
+    }
 
     // Save screenshot for debugging
-    const png = image.toPngSync();
+    const png = image!.toPngSync();
     const screenshotPath = join(SCREENSHOT_DIR, `dialog-${process.platform}.png`);
     await Bun.write(screenshotPath, png);
     console.log(`Screenshot saved to ${screenshotPath}`);
-
-    const uniqueColors = countCenterColors(rgba, width, height);
     console.log(`Unique colors in center region: ${uniqueColors}`);
 
     // A rendered form has dozens of distinct colors; a blank window has ~1
     expect(uniqueColors).toBeGreaterThan(5);
-  });
+  }, 20_000);
 });
