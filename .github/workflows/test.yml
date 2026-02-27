@@ -51,9 +51,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           Xvfb :99 -screen 0 1280x1024x24 &
-          sleep 1
+          sleep 2
           DISPLAY=:99 openbox &
-          sleep 1
+          sleep 2
           DISPLAY=:99 WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 GUI_TEST=1 bun test test/gui-screenshot.test.ts
 
       - name: Run GUI tests (Windows)

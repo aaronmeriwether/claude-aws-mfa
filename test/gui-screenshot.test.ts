@@ -52,21 +52,28 @@ describe.skipIf(!process.env.GUI_TEST)("GUI screenshot tests", () => {
       stderr: "inherit",
     });
 
-    // Poll for the window to appear (up to 15s)
-    const deadline = Date.now() + 15_000;
+    // Poll for the window to appear (up to 20s).
+    // Window.all() may throw if the window manager hasn't registered
+    // EWMH atoms yet (e.g. _NET_CLIENT_LIST_STACKING on Linux), so
+    // we catch and retry.
+    const deadline = Date.now() + 20_000;
     while (Date.now() < deadline) {
-      const windows = windowModule.Window.all();
-      const match = windows.find((w) => {
-        try { return w.title()?.includes("Claude AWS MFA"); }
-        catch { return false; }
-      });
-      if (match) {
-        foundWindow = match;
-        break;
+      try {
+        const windows = windowModule.Window.all();
+        const match = windows.find((w) => {
+          try { return w.title()?.includes("Claude AWS MFA"); }
+          catch { return false; }
+        });
+        if (match) {
+          foundWindow = match;
+          break;
+        }
+      } catch {
+        // Window.all() not yet available — WM still initializing
       }
       await Bun.sleep(500);
     }
-  });
+  }, 30_000);
 
   afterAll(() => {
     proc?.kill();
