@@ -4,13 +4,6 @@ import type { Config } from "./config";
 import { buildHtml } from "./dialog-html";
 import { version } from "../package.json";
 
-// Disable WebKitGTK's bubblewrap sandbox on Linux — it requires unprivileged
-// user namespaces which are unavailable in many environments (containers,
-// restrictive sysctl, etc.).  Safe because we only render a local HTML form.
-if (process.platform === "linux") {
-  process.env.WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS ??= "1";
-}
-
 export interface DialogResult {
   region: string;
   accessKeyId: string;

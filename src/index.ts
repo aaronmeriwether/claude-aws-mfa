@@ -1,5 +1,20 @@
 #!/usr/bin/env bun
 
+// Disable WebKitGTK's bubblewrap sandbox on Linux — it requires unprivileged
+// user namespaces which are unavailable in many environments (containers,
+// restrictive sysctl, etc.).  Bun's process.env doesn't propagate to C-level
+// getenv(), so we re-exec with the env var set at the OS level.
+if (process.platform === "linux" && !process.env.WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS) {
+  const proc = Bun.spawnSync({
+    cmd: [process.execPath, ...Bun.argv.slice(1)],
+    env: { ...process.env, WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS: "1" },
+    stdin: "inherit",
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  process.exit(proc.exitCode);
+}
+
 import { loadConfig, saveConfig, seedDefaults } from "./config";
 import { showDialog } from "./dialog";
 import { assumeRoleWithMfa } from "./sts";
