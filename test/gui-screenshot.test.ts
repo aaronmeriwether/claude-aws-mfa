@@ -89,7 +89,7 @@ describe.skipIf(!process.env.GUI_TEST)("GUI screenshot tests", () => {
     expect(foundWindow!.title()).toContain("Claude AWS MFA");
   });
 
-  test("window content is non-uniform", () => {
+  test("window content is non-uniform", async () => {
     expect(foundWindow).not.toBeNull();
 
     const image = foundWindow!.captureImageSync();
@@ -100,10 +100,7 @@ describe.skipIf(!process.env.GUI_TEST)("GUI screenshot tests", () => {
     // Save screenshot for debugging
     const png = image.toPngSync();
     const screenshotPath = join(SCREENSHOT_DIR, `dialog-${process.platform}.png`);
-    Bun.writeSync(
-      Bun.openSync(screenshotPath, "w"),
-      png,
-    );
+    await Bun.write(screenshotPath, png);
     console.log(`Screenshot saved to ${screenshotPath}`);
 
     const uniqueColors = countCenterColors(rgba, width, height);
