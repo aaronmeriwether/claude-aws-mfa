@@ -56,9 +56,10 @@ describe.skipIf(!process.env.GUI_TEST)("GUI screenshot tests", () => {
     const deadline = Date.now() + 15_000;
     while (Date.now() < deadline) {
       const windows = windowModule.Window.all();
-      const match = windows.find((w) =>
-        w.title.includes("Claude AWS MFA"),
-      );
+      const match = windows.find((w) => {
+        try { return w.title()?.includes("Claude AWS MFA"); }
+        catch { return false; }
+      });
       if (match) {
         foundWindow = match;
         break;
@@ -78,7 +79,7 @@ describe.skipIf(!process.env.GUI_TEST)("GUI screenshot tests", () => {
 
   test("window appears in window manager", () => {
     expect(foundWindow).not.toBeNull();
-    expect(foundWindow!.title).toContain("Claude AWS MFA");
+    expect(foundWindow!.title()).toContain("Claude AWS MFA");
   });
 
   test("window content is non-uniform", () => {
