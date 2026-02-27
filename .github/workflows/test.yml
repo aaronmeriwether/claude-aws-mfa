@@ -24,3 +24,46 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - run: bun test
+
+  gui-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Install Linux GUI dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-1 libwebkitgtk-6.0-4 libxcb1 libxrandr2 libdbus-1-3 xvfb
+
+      - name: Run GUI tests (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          Xvfb :99 -screen 0 1280x1024x24 &
+          sleep 1
+          DISPLAY=:99 WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 GUI_TEST=1 bun test test/gui-screenshot.test.ts
+
+      - name: Run GUI tests (Windows)
+        if: runner.os == 'Windows'
+        env:
+          GUI_TEST: "1"
+        run: bun test test/gui-screenshot.test.ts
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ matrix.os }}
+          path: test/screenshots/
+          if-no-files-found: ignore

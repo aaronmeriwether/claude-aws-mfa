@@ -7,7 +7,8 @@
     "claude-aws-mfa": "./src/index.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "node-screenshots": "^0.2.8"
   },
   "peerDependencies": {
     "typescript": "^5"
