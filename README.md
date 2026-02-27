@@ -53,7 +53,7 @@ On subsequent runs, all fields are pre-populated from the saved config — just 
 The GUI dialog uses [webview-bun](https://github.com/tr1ckydev/webview-bun), which requires:
 
 - **macOS**: No additional dependencies (uses WebKit)
-- **Linux**: `sudo apt install libgtk-4-1 libwebkitgtk-6.0-4` (Debian/Ubuntu)
+- **Linux**: `sudo apt install libgtk-4-1 libwebkitgtk-6.0-4` (Debian/Ubuntu). If you see a `bwrap: setting up uid map: Permission denied` error, your system restricts unprivileged user namespaces. The tool automatically detects this and disables WebKitGTK's sandbox (safe since only a local form is rendered). To fix system-wide: `sudo sysctl -w kernel.unprivileged_userns_clone=1`
 - **Windows**: Edge WebView2 runtime (included in Windows 11+)
 
 ## Development

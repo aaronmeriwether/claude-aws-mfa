@@ -4,6 +4,27 @@ import type { Config } from "./config";
 import { buildHtml } from "./dialog-html";
 import { version } from "../package.json";
 
+/**
+ * On Linux, WebKitGTK uses bubblewrap (bwrap) to sandbox web processes.
+ * If user namespaces are unavailable (containers, restrictive sysctl, etc.)
+ * the sandbox setup fails and the process crashes. Since we only render a
+ * local HTML form, we can safely disable the sandbox in those environments.
+ */
+function ensureWebkitSandboxCompat(): void {
+  if (process.platform !== "linux") return;
+  if (process.env.WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS) return;
+
+  try {
+    const result = Bun.spawnSync(["bwrap", "--ro-bind", "/", "/", "true"]);
+    if (result.exitCode !== 0) {
+      process.env.WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS = "1";
+    }
+  } catch {
+    // bwrap not found or other error — disable sandbox to be safe.
+    process.env.WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS = "1";
+  }
+}
+
 export interface DialogResult {
   region: string;
   accessKeyId: string;
@@ -31,6 +52,8 @@ function clipboardCommand(): string[] {
 }
 
 export function showDialog(defaults: Partial<Config>): DialogResult | null {
+  ensureWebkitSandboxCompat();
+
   const webview = new Webview(false, {
     width: 440,
     height: 670,
