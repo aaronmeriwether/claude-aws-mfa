@@ -15,6 +15,12 @@ if (process.platform === "linux" && !process.env.WEBKIT_DISABLE_SANDBOX_THIS_IS_
   process.exit(proc.exitCode);
 }
 
+const arg = process.argv[2];
+if (arg === "setup" || arg === "--setup") {
+  const { runSetup } = await import("./setup");
+  process.exit(runSetup() ? 0 : 2);
+}
+
 import { loadConfig, saveConfig, seedDefaults } from "./config";
 import { showDialog } from "./dialog";
 import { assumeRoleWithMfa } from "./sts";
