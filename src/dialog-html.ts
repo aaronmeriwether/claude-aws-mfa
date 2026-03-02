@@ -1,3 +1,5 @@
+import { STANDARD_DURATIONS } from "./sts";
+
 export const FIELDS = ["region", "accessKeyId", "secretAccessKey", "mfaArn", "roleArn", "duration", "mfaMode", "mfaCode", "mfaCommand"] as const;
 
 export const FIELD_PATTERNS: Record<string, string> = {
@@ -58,7 +60,7 @@ export function buildHtml(config: Record<string, string>) {
   <div class="field"><label>Secret Access Key</label><input id="secretAccessKey" type="password"></div>
   <div class="field"><label>MFA Device ARN</label><input id="mfaArn" placeholder="arn:aws:iam::123456789012:mfa/user"></div>
   <div class="field"><label>Role ARN</label><input id="roleArn" placeholder="arn:aws:iam::123456789012:role/MyRole"></div>
-  <div class="field"><label>Session Duration (seconds)</label><input id="duration" placeholder="43200"></div>
+  <div class="field"><label>Session Duration (seconds)</label><input id="duration" placeholder="${STANDARD_DURATIONS[0]}"></div>
   <hr>
   <div class="radio-field">
     <input type="radio" name="mfaMode" id="mfaModeCode" value="code" checked>

@@ -23,7 +23,7 @@ if (arg === "setup" || arg === "--setup") {
 
 import { loadConfig, saveConfig, seedDefaults } from "./config";
 import { showDialog } from "./dialog";
-import { assumeRoleWithMfa } from "./sts";
+import { assumeRoleWithMfa, STANDARD_DURATIONS } from "./sts";
 
 const defaults = loadConfig() ?? await seedDefaults();
 
@@ -51,7 +51,7 @@ try {
     mfaArn: result.mfaArn,
     roleArn: result.roleArn,
     mfaCode,
-    duration: parseInt(result.duration, 10) || 43200,
+    duration: parseInt(result.duration, 10) || STANDARD_DURATIONS[0],
   });
 
   saveConfig({

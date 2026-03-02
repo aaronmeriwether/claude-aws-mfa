@@ -3,6 +3,7 @@ import { lib } from "webview-bun/src/ffi";
 import type { Config } from "./config";
 import { buildHtml } from "./dialog-html";
 import { version } from "../package.json";
+import { STANDARD_DURATIONS } from "./sts";
 
 export interface DialogResult {
   region: string;
@@ -66,7 +67,7 @@ export function showDialog(defaults: Partial<Config>): DialogResult | null {
     secretAccessKey: defaults.secretAccessKey ?? "",
     mfaArn: defaults.mfaArn ?? "",
     roleArn: defaults.roleArn ?? "",
-    duration: String(defaults.duration ?? 43200),
+    duration: String(defaults.duration ?? STANDARD_DURATIONS[0]),
     mfaCommand: defaults.mfaCommand ?? "",
     mfaMode: defaults.mfaMode ?? "code",
   }));

@@ -1,6 +1,6 @@
 import { STSClient, AssumeRoleCommand } from "@aws-sdk/client-sts";
 
-const STANDARD_DURATIONS = [43200, 21600, 7200, 3600];
+export const STANDARD_DURATIONS = [129600, 86400, 43200, 28800, 21600, 14400, 7200, 3600];
 
 export function isDurationError(err: unknown): boolean {
   const msg = String(err).toLowerCase();
