@@ -1,28 +1,30 @@
 # claude-aws-mfa
 
-AWS MFA credential helper for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Shows a native dialog to collect AWS credentials and an MFA code, calls STS AssumeRole with automatic duration negotiation, and outputs temporary credentials in the format Claude Code expects.
+AWS MFA credential helper for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Shows a native dialog to collect AWS credentials and an MFA code, calls STS AssumeRole with automatic duration negotiation, and outputs temporary credentials to stdout in the format Claude Code expects.
 
 ## Install
 
 Requires [Bun](https://bun.sh) runtime.
 
 ```bash
-bun install -g claude-aws-mfa
-```
-
-Or run directly without installing:
-
-```bash
-bunx claude-aws-mfa
+bun install -g claude-aws-mfa@latest
 ```
 
 ## Configure Claude Code
+
+### Guided Setup
+
+Run `claude-aws-mfa --setup`, to access a configuration UI for easy setup of this tool.  You will be presented with a checkbox to enable credential-handling, and fields to customize a few key settings.   Specifically, you can pin specific versions of the Anthropic models to use for Opus, Sonnet, and Haiku, in case your Bedrock policy does not allow you access to the latest default models that Claude Code will try to use.  You can also set the "max output tokens" and "max thinking tokens" values; in a corporate environment these often have recommended values to help manage costs.
+
+Once you have enabled credential-handling and saved the settings, you can launch Claude Code and begin work.  You will automatically prompted for your AWS credentials, and Claude will connect to the specified AWS Bedrock account rather than to the Anthropic servers.
+
+### Manual Setup
 
 Add to your Claude Code settings (`~/.claude/settings.json`):
 
 ```json
 {
-  "awsCredentialExport": "bunx claude-aws-mfa"
+  "awsCredentialExport": "claude-aws-mfa"
 }
 ```
 
@@ -53,7 +55,7 @@ On subsequent runs, all fields are pre-populated from the saved config — just 
 The GUI dialog uses [webview-bun](https://github.com/tr1ckydev/webview-bun), which requires:
 
 - **macOS**: No additional dependencies (uses WebKit)
-- **Linux**: `sudo apt install libgtk-4-1 libwebkitgtk-6.0-4` (Debian/Ubuntu)
+- **Linux**: `sudo apt install libwebkitgtk-6.0-4` (Debian/Ubuntu)
 - **Windows**: Edge WebView2 runtime (included in Windows 11+)
 
 ## Development
