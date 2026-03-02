@@ -14,7 +14,7 @@ bun install -g claude-aws-mfa@latest
 
 ### Guided Setup
 
-Run `claude-aws-mfa --setup`, to access a configuration UI for easy setup of this tool.  You will be presented with a checkbox to enable credential-handling, and fields to customize a few key settings.   Specifically, you can pin specific versions of the Anthropic models to use for Opus, Sonnet, and Haiku, in case your Bedrock policy does not allow you access to the latest default models that Claude Code will try to use.  You can also set the "max output tokens" and "max thinking tokens" values; in a corporate environment these often have recommended values to help manage costs.
+Run `claude-aws-mfa --setup`, to access a configuration UI for easy setup of this tool.  You will be presented with a checkbox to enable Bedrock via claude-aws-mfa, and fields to customize a few key settings.   Specifically, you can pin specific versions of the Anthropic models to use for Opus, Sonnet, and Haiku, in case your Bedrock policy does not allow you access to the latest default models that Claude Code will try to use.
 
 Once you have enabled credential-handling and saved the settings, you can launch Claude Code and begin work.  You will automatically prompted for your AWS credentials, and Claude will connect to the specified AWS Bedrock account rather than to the Anthropic servers.
 

@@ -1,31 +1,19 @@
 import type { ClaudeSettings } from "./claude-settings";
 
-export const ENV_CHECKBOXES = [
-  { key: "CLAUDE_CODE_USE_BEDROCK", value: "1", label: "Enable Bedrock" },
-] as const;
-
 export const TEXT_FIELDS = [
   { key: "ANTHROPIC_DEFAULT_OPUS_MODEL", label: "Opus Model", placeholder: "global.anthropic.claude-opus-4-6" },
   { key: "ANTHROPIC_DEFAULT_SONNET_MODEL", label: "Sonnet Model", placeholder: "global.anthropic.claude-sonnet-4-6" },
   { key: "ANTHROPIC_DEFAULT_HAIKU_MODEL", label: "Haiku Model", placeholder: "global.anthropic.claude-haiku-4-5" },
   { key: "CLAUDE_CODE_SUBAGENT_MODEL", label: "Subagent Model", placeholder: "global.anthropic.claude-sonnet-4-6" },
-  { key: "CLAUDE_CODE_MAX_OUTPUT_TOKENS", label: "Max Output Tokens", placeholder: "32000" },
-  { key: "CLAUDE_CODE_MAX_THINKING_TOKENS", label: "Max Thinking Tokens", placeholder: "31999" },
 ] as const;
 
 export function buildSetupHtml(env: Record<string, string>, settings: ClaudeSettings, credentialExportCmd: string) {
-  const envCheckboxesHtml = ENV_CHECKBOXES.map(cb => {
-    const checked = env[cb.key] === cb.value ? "checked" : "";
-    return `<div class="checkbox-field">
-      <input type="checkbox" id="${cb.key}" ${checked}>
-      <label for="${cb.key}">${cb.label}</label>
-    </div>`;
-  }).join("\n  ");
-
-  const mfaEnabled = settings.awsCredentialExport !== undefined || env.AWS_SHARED_CREDENTIALS_FILE === "/dev/null";
-  const mfaCheckboxHtml = `<div class="checkbox-field">
-      <input type="checkbox" id="enableMfa" ${mfaEnabled ? "checked" : ""}>
-      <label for="enableMfa">Enable claude-aws-mfa</label>
+  const bedrockMfaEnabled = env.CLAUDE_CODE_USE_BEDROCK === "1"
+    || settings.awsCredentialExport !== undefined
+    || env.AWS_SHARED_CREDENTIALS_FILE === "/dev/null";
+  const bedrockMfaCheckboxHtml = `<div class="checkbox-field">
+      <input type="checkbox" id="enableBedrockMfa" ${bedrockMfaEnabled ? "checked" : ""}>
+      <label for="enableBedrockMfa">Enable Bedrock via claude-aws-mfa</label>
     </div>`;
 
   const textFieldsHtml = TEXT_FIELDS.map(f => {
@@ -76,8 +64,7 @@ export function buildSetupHtml(env: Record<string, string>, settings: ClaudeSett
 <body>
   <h2>Claude Code Bedrock Setup</h2>
 
-  ${envCheckboxesHtml}
-  ${mfaCheckboxHtml}
+  ${bedrockMfaCheckboxHtml}
 
   <hr>
 
@@ -89,7 +76,6 @@ export function buildSetupHtml(env: Record<string, string>, settings: ClaudeSett
   </div>
 
   <script>
-    const ENV_CHECKBOXES = ${JSON.stringify(ENV_CHECKBOXES)};
     const TEXT_FIELDS = ${JSON.stringify(TEXT_FIELDS)};
     const originalEnv = ${JSON.stringify(env)};
     const originalSettings = ${JSON.stringify(settings)};
@@ -99,22 +85,17 @@ export function buildSetupHtml(env: Record<string, string>, settings: ClaudeSett
       const env = {};
       const top = {};
 
-      for (const cb of ENV_CHECKBOXES) {
-        const el = document.getElementById(cb.key);
-        if (el.checked) {
-          env[cb.key] = cb.value;
-        } else if (originalEnv[cb.key] === cb.value) {
-          env[cb.key] = null;
-        }
-      }
-
-      // Combined "Enable claude-aws-mfa" checkbox controls both
-      // awsCredentialExport (top-level) and AWS_SHARED_CREDENTIALS_FILE (env)
-      const mfaChecked = document.getElementById("enableMfa").checked;
-      if (mfaChecked) {
+      // Combined checkbox controls CLAUDE_CODE_USE_BEDROCK,
+      // awsCredentialExport (top-level), and AWS_SHARED_CREDENTIALS_FILE (env)
+      const enabled = document.getElementById("enableBedrockMfa").checked;
+      if (enabled) {
+        env["CLAUDE_CODE_USE_BEDROCK"] = "1";
         top["awsCredentialExport"] = credentialExportCmd;
         env["AWS_SHARED_CREDENTIALS_FILE"] = "/dev/null";
       } else {
+        if (originalEnv["CLAUDE_CODE_USE_BEDROCK"] === "1") {
+          env["CLAUDE_CODE_USE_BEDROCK"] = null;
+        }
         if (originalSettings["awsCredentialExport"] !== undefined) {
           top["awsCredentialExport"] = null;
         }

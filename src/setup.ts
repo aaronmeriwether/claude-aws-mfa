@@ -23,7 +23,7 @@ export function runSetup(): boolean {
 
   const webview = new Webview(false, {
     width: 480,
-    height: 640,
+    height: 480,
     hint: SizeHint.FIXED,
   });
   webview.title = `Claude Code Bedrock Setup v${version}`;
