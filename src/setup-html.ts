@@ -9,8 +9,8 @@ export const TEXT_FIELDS = [
 
 export function buildSetupHtml(env: Record<string, string>, settings: ClaudeSettings, credentialExportCmd: string) {
   const bedrockMfaEnabled = env.CLAUDE_CODE_USE_BEDROCK === "1"
-    || settings.awsCredentialExport !== undefined
-    || env.AWS_SHARED_CREDENTIALS_FILE === "/dev/null";
+    && settings.awsCredentialExport !== undefined
+    && env.AWS_SHARED_CREDENTIALS_FILE === "/dev/null";
   const bedrockMfaCheckboxHtml = `<div class="checkbox-field">
       <input type="checkbox" id="enableBedrockMfa" ${bedrockMfaEnabled ? "checked" : ""}>
       <label for="enableBedrockMfa">Enable Bedrock via claude-aws-mfa</label>
@@ -86,20 +86,20 @@ export function buildSetupHtml(env: Record<string, string>, settings: ClaudeSett
       const top = {};
 
       // Combined checkbox controls CLAUDE_CODE_USE_BEDROCK,
-      // awsCredentialExport (top-level), and AWS_SHARED_CREDENTIALS_FILE (env)
+      // awsCredentialExport (top-level), and AWS_SHARED_CREDENTIALS_FILE (env).
+      // Only save changes when the checkbox state differs from load time.
+      const wasEnabled = originalEnv["CLAUDE_CODE_USE_BEDROCK"] === "1"
+        && originalSettings["awsCredentialExport"] !== undefined
+        && originalEnv["AWS_SHARED_CREDENTIALS_FILE"] === "/dev/null";
       const enabled = document.getElementById("enableBedrockMfa").checked;
-      if (enabled) {
-        env["CLAUDE_CODE_USE_BEDROCK"] = "1";
-        top["awsCredentialExport"] = credentialExportCmd;
-        env["AWS_SHARED_CREDENTIALS_FILE"] = "/dev/null";
-      } else {
-        if (originalEnv["CLAUDE_CODE_USE_BEDROCK"] === "1") {
+      if (enabled !== wasEnabled) {
+        if (enabled) {
+          env["CLAUDE_CODE_USE_BEDROCK"] = "1";
+          top["awsCredentialExport"] = credentialExportCmd;
+          env["AWS_SHARED_CREDENTIALS_FILE"] = "/dev/null";
+        } else {
           env["CLAUDE_CODE_USE_BEDROCK"] = null;
-        }
-        if (originalSettings["awsCredentialExport"] !== undefined) {
           top["awsCredentialExport"] = null;
-        }
-        if (originalEnv["AWS_SHARED_CREDENTIALS_FILE"] === "/dev/null") {
           env["AWS_SHARED_CREDENTIALS_FILE"] = null;
         }
       }
