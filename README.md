@@ -20,19 +20,13 @@ Once you have enabled credential-handling and saved the settings, you can launch
 
 ### Manual Setup
 
-Add to your Claude Code settings (`~/.claude/settings.json`):
+Add this (plus any addtitional config you prefer) to your Claude Code settings (`~/.claude/settings.json`):
 
 ```json
 {
-  "awsCredentialExport": "claude-aws-mfa"
-}
-```
-
-If you have an existing `~/.aws/credentials` file, you will likely need to suppress Claude's use of that file so it will correctly invoke the `awsCredentialExport` tool instead.
-
-```json
-{
+  "awsCredentialExport": "claude-aws-mfa",
   "env": {
+    "CLAUDE_CODE_USE_BEDROCK": "1",
     "AWS_SHARED_CREDENTIALS_FILE": "/dev/null"
   }
 }
