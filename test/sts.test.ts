@@ -47,7 +47,7 @@ beforeEach(() => {
 
 describe("durationLadder", () => {
   test("standard duration returns it and all smaller standard values", () => {
-    expect(durationLadder(43200)).toEqual([43200, 21600, 7200, 3600]);
+    expect(durationLadder(43200)).toEqual([43200, 28800, 21600, 14400, 7200, 3600]);
   });
 
   test("mid-range standard duration", () => {
@@ -59,7 +59,7 @@ describe("durationLadder", () => {
   });
 
   test("non-standard duration is tried first, then smaller standard values", () => {
-    expect(durationLadder(50000)).toEqual([50000, 43200, 21600, 7200, 3600]);
+    expect(durationLadder(50000)).toEqual([50000, 43200, 28800, 21600, 14400, 7200, 3600]);
   });
 
   test("non-standard mid-range duration", () => {
@@ -125,24 +125,24 @@ describe("assumeRoleWithMfa", () => {
 
     const result = await assumeRoleWithMfa(BASE_PARAMS);
 
-    expect(result.duration).toBe(21600);
+    expect(result.duration).toBe(28800);
     expect(capturedCommands).toHaveLength(2);
     expect(capturedCommands[0].DurationSeconds).toBe(43200);
-    expect(capturedCommands[1].DurationSeconds).toBe(21600);
+    expect(capturedCommands[1].DurationSeconds).toBe(28800);
   });
 
   test("tries all durations in ladder on repeated duration errors", async () => {
     let callCount = 0;
     mockSend = mock(() => {
       callCount++;
-      if (callCount < 4) return Promise.reject(new Error("DurationSeconds exceeds the maximum"));
+      if (callCount < 6) return Promise.reject(new Error("DurationSeconds exceeds the maximum"));
       return Promise.resolve(MOCK_CREDENTIALS);
     });
 
     const result = await assumeRoleWithMfa(BASE_PARAMS);
 
     expect(result.duration).toBe(3600);
-    expect(capturedCommands).toHaveLength(4);
+    expect(capturedCommands).toHaveLength(6);
   });
 
   test("throws non-duration errors immediately without retry", async () => {
