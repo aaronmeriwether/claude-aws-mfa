@@ -37,6 +37,7 @@ const MOCK_CREDENTIALS = {
     AccessKeyId: "ASIATEMP",
     SecretAccessKey: "TempSecret",
     SessionToken: "TempToken",
+    Expiration: new Date("2099-01-01T00:00:00Z"),
   },
 };
 
@@ -98,6 +99,7 @@ describe("assumeRoleWithMfa", () => {
       AccessKeyId: "ASIATEMP",
       SecretAccessKey: "TempSecret",
       SessionToken: "TempToken",
+      Expiration: "2099-01-01T00:00:00.000Z",
     });
     expect(result.duration).toBe(43200);
   });

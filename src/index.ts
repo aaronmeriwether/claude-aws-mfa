@@ -15,25 +15,107 @@ if (process.platform === "linux" && !process.env.WEBKIT_DISABLE_SANDBOX_THIS_IS_
   process.exit(proc.exitCode);
 }
 
-const arg = process.argv[2];
-if (arg === "setup" || arg === "--setup") {
+import { parseFlags } from "./flags";
+
+const flags = parseFlags(process.argv);
+
+if (flags.setup) {
   const { runSetup } = await import("./setup");
   process.exit(runSetup() ? 0 : 2);
 }
 
-import { loadConfig, saveConfig, seedDefaults } from "./config";
+import type { CachedSession, Config } from "./config";
+import { loadConfig, saveConfig, seedDefaults, tryAcquireLock, releaseLock, waitForLock } from "./config";
 import { showDialog } from "./dialog";
 import { assumeRoleWithMfa, STANDARD_DURATIONS } from "./sts";
 
-const defaults = loadConfig() ?? await seedDefaults();
+// --- Resolve effective flags (CLI overrides config defaults) ---
 
-const result = showDialog(defaults);
-if (!result) {
-  process.stderr.write("User cancelled dialog.\n");
-  process.exit(2);
+const config = loadConfig();
+const defaults: Partial<Config> = config ?? await seedDefaults();
+
+const useCache = flags.cacheSession ?? defaults.cacheSession ?? false;
+const useAutoMfa = flags.autoMfa ?? defaults.autoMfa ?? false;
+const useLock = flags.singleInstanceLock ?? defaults.singleInstanceLock ?? false;
+
+// --- Helper: check if a cached session is still valid ---
+
+function isSessionValid(session: CachedSession | undefined): session is CachedSession {
+  if (!session) return false;
+  return new Date(session.Expiration).getTime() > Date.now();
 }
 
-try {
+// --- Helper: output credentials and save config ---
+
+function outputCredentials(session: CachedSession): void {
+  console.log(JSON.stringify({
+    Credentials: {
+      AccessKeyId: session.AccessKeyId,
+      SecretAccessKey: session.SecretAccessKey,
+      SessionToken: session.SessionToken,
+    },
+  }));
+}
+
+// --- Helper: run MFA command and attempt to obtain credentials without dialog ---
+
+async function tryAutoMfa(cfg: Partial<Config>): Promise<CachedSession | null> {
+  if (!cfg.mfaCommand || cfg.mfaMode !== "command") return null;
+  if (!cfg.region || !cfg.accessKeyId || !cfg.secretAccessKey || !cfg.mfaArn || !cfg.roleArn) return null;
+
+  try {
+    const proc = Bun.spawnSync(["sh", "-c", cfg.mfaCommand]);
+    if (proc.exitCode !== 0) return null;
+    const mfaCode = proc.stdout.toString().trim();
+    if (!mfaCode) return null;
+
+    const { credentials, duration } = await assumeRoleWithMfa({
+      region: cfg.region,
+      accessKeyId: cfg.accessKeyId,
+      secretAccessKey: cfg.secretAccessKey,
+      mfaArn: cfg.mfaArn,
+      roleArn: cfg.roleArn,
+      mfaCode,
+      duration: cfg.duration ?? STANDARD_DURATIONS[0],
+    });
+
+    const session: CachedSession = {
+      AccessKeyId: credentials.AccessKeyId,
+      SecretAccessKey: credentials.SecretAccessKey,
+      SessionToken: credentials.SessionToken,
+      Expiration: credentials.Expiration,
+    };
+
+    saveConfig({
+      region: cfg.region,
+      accessKeyId: cfg.accessKeyId,
+      secretAccessKey: cfg.secretAccessKey,
+      mfaArn: cfg.mfaArn,
+      roleArn: cfg.roleArn,
+      duration,
+      mfaMode: cfg.mfaMode,
+      mfaCommand: cfg.mfaCommand,
+      cacheSession: cfg.cacheSession,
+      autoMfa: cfg.autoMfa,
+      singleInstanceLock: cfg.singleInstanceLock,
+      ...(useCache ? { cachedSession: session } : {}),
+    });
+
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+// --- Helper: show dialog and obtain credentials ---
+
+async function obtainViaDialog(cfg: Partial<Config>): Promise<void> {
+  const result = showDialog(cfg);
+  if (!result) {
+    process.stderr.write("User cancelled dialog.\n");
+    process.exit(2);
+  }
+
   let mfaCode = result.mfaCode;
   if (result.mfaMode === "command") {
     const proc = Bun.spawnSync(["sh", "-c", result.mfaCommand]);
@@ -54,6 +136,13 @@ try {
     duration: parseInt(result.duration, 10) || STANDARD_DURATIONS[0],
   });
 
+  const session: CachedSession = {
+    AccessKeyId: credentials.AccessKeyId,
+    SecretAccessKey: credentials.SecretAccessKey,
+    SessionToken: credentials.SessionToken,
+    Expiration: credentials.Expiration,
+  };
+
   saveConfig({
     region: result.region,
     accessKeyId: result.accessKeyId,
@@ -63,10 +152,81 @@ try {
     duration,
     mfaMode: result.mfaMode,
     mfaCommand: result.mfaCommand || undefined,
+    cacheSession: defaults.cacheSession,
+    autoMfa: defaults.autoMfa,
+    singleInstanceLock: defaults.singleInstanceLock,
+    ...(useCache ? { cachedSession: session } : {}),
   });
 
-  console.log(JSON.stringify({ Credentials: credentials }));
+  outputCredentials(session);
+}
+
+// --- Main flow ---
+
+try {
+  // 1. If cache-session is enabled, check for unexpired cached credentials
+  if (useCache && config?.cachedSession) {
+    if (isSessionValid(config.cachedSession)) {
+      // Return cached credentials without showing dialog
+      outputCredentials(config.cachedSession);
+      process.exit(0);
+    }
+    // Expired — clear the cached session
+    saveConfig({ ...config, cachedSession: undefined });
+  }
+
+  // 2. If auto-mfa is enabled, try to obtain credentials without dialog
+  if (useAutoMfa) {
+    const session = await tryAutoMfa(defaults);
+    if (session) {
+      outputCredentials(session);
+      process.exit(0);
+    }
+  }
+
+  // 3. If single-instance-lock is enabled, acquire lock before showing dialog
+  if (useLock) {
+    if (!tryAcquireLock()) {
+      // Another instance holds the lock — wait for it
+      process.stderr.write("Waiting for another instance to finish...\n");
+      await waitForLock();
+
+      // After lock releases, re-check cached session (another instance may have refreshed it)
+      if (useCache) {
+        const freshConfig = loadConfig();
+        if (freshConfig?.cachedSession && isSessionValid(freshConfig.cachedSession)) {
+          outputCredentials(freshConfig.cachedSession);
+          process.exit(0);
+        }
+      }
+
+      // Still need credentials — acquire lock and show dialog
+      if (!tryAcquireLock()) {
+        // Edge case: another waiter grabbed the lock first — wait again
+        await waitForLock();
+        if (useCache) {
+          const freshConfig = loadConfig();
+          if (freshConfig?.cachedSession && isSessionValid(freshConfig.cachedSession)) {
+            outputCredentials(freshConfig.cachedSession);
+            process.exit(0);
+          }
+        }
+        // Final attempt to acquire — proceed regardless
+        tryAcquireLock();
+      }
+    }
+
+    try {
+      await obtainViaDialog(defaults);
+    } finally {
+      releaseLock();
+    }
+  } else {
+    // No lock — just show dialog directly
+    await obtainViaDialog(defaults);
+  }
 } catch (err) {
+  if (useLock) releaseLock();
   // Mask any AWS access-key IDs or secret keys that may appear in error messages
   const raw = String(err);
   const masked = raw

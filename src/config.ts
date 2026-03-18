@@ -6,10 +6,19 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  rmSync,
   statSync,
   writeFileSync,
+  writeSync,
 } from "fs";
 import { STSClient } from "@aws-sdk/client-sts";
+
+export interface CachedSession {
+  AccessKeyId: string;
+  SecretAccessKey: string;
+  SessionToken: string;
+  Expiration: string; // ISO 8601
+}
 
 export interface Config {
   region: string;
@@ -20,6 +29,10 @@ export interface Config {
   duration: number;
   mfaMode?: "code" | "command";
   mfaCommand?: string;
+  cacheSession?: boolean;
+  autoMfa?: boolean;
+  singleInstanceLock?: boolean;
+  cachedSession?: CachedSession;
 }
 
 const CONFIG_PATH = join(homedir(), ".config", "claude-aws-mfa.json");
@@ -102,6 +115,66 @@ export function saveConfig(config: Config) {
 
   // File now exists with 0600 — overwrite its content
   writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
+}
+
+// --- Single-instance lock ---
+
+const LOCK_PATH = join(homedir(), ".config", "claude-aws-mfa.lock");
+const LOCK_POLL_MS = 500;
+const LOCK_STALE_MS = 120_000; // 2 minutes — assume stale if holder crashed
+
+/**
+ * Attempt to acquire an exclusive lock.  Returns true if acquired.
+ * Uses O_EXCL to atomically create the lock file.
+ */
+export function tryAcquireLock(): boolean {
+  ensureConfigDir();
+  try {
+    const fd = openSync(LOCK_PATH, "wx", 0o600);
+    writeSync(fd, String(process.pid));
+    closeSync(fd);
+    return true;
+  } catch (err: any) {
+    if (err?.code === "EEXIST") {
+      // Check for stale lock
+      try {
+        const st = statSync(LOCK_PATH);
+        if (Date.now() - st.mtimeMs > LOCK_STALE_MS) {
+          // Stale lock — remove and retry once
+          try { rmSync(LOCK_PATH); } catch {}
+          return tryAcquireLock();
+        }
+      } catch {}
+      return false;
+    }
+    throw err;
+  }
+}
+
+/** Release the lock file. */
+export function releaseLock(): void {
+  try { rmSync(LOCK_PATH); } catch {}
+}
+
+/**
+ * Wait until the lock is released, polling every LOCK_POLL_MS.
+ * Returns once the lock file disappears (or becomes stale).
+ */
+export async function waitForLock(): Promise<void> {
+  while (true) {
+    try {
+      const st = statSync(LOCK_PATH);
+      if (Date.now() - st.mtimeMs > LOCK_STALE_MS) {
+        // Stale — break out so caller can acquire
+        try { rmSync(LOCK_PATH); } catch {}
+        return;
+      }
+    } catch {
+      // Lock file gone — we can proceed
+      return;
+    }
+    await Bun.sleep(LOCK_POLL_MS);
+  }
 }
 
 export async function seedDefaults(): Promise<Partial<Config>> {

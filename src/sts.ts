@@ -47,6 +47,7 @@ export async function assumeRoleWithMfa(params: {
           AccessKeyId: c!.AccessKeyId!,
           SecretAccessKey: c!.SecretAccessKey!,
           SessionToken: c!.SessionToken!,
+          Expiration: c!.Expiration ? c!.Expiration.toISOString() : new Date(Date.now() + ladder[i] * 1000).toISOString(),
         },
         duration: ladder[i],
       };
