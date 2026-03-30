@@ -52,10 +52,6 @@ jobs:
     needs: detect-release
     if: needs.detect-release.outputs.version != ''
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-
     steps:
       - uses: actions/checkout@v4
 
@@ -73,10 +69,12 @@ jobs:
           npm version "${VERSION#v}" --no-git-tag-version
 
       - name: Create Git tag
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
           VERSION="${{ needs.detect-release.outputs.version }}"
           git tag "$VERSION"
-          git push origin "$VERSION"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "$VERSION"
 
       - name: Extract changelog entry
         id: changelog
@@ -89,7 +87,7 @@ jobs:
 
       - name: Create GitHub Release
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
           VERSION="${{ needs.detect-release.outputs.version }}"
           PRERELEASE="${{ needs.detect-release.outputs.prerelease }}"
