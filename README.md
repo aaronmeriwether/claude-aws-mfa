@@ -32,6 +32,17 @@ Add this (plus any addtitional config you prefer) to your Claude Code settings (
 }
 ```
 
+## CLI Flags
+
+All flags can be negated with a `--no-` prefix (e.g. `--no-cache-session`). CLI flags override values saved in the config file.
+
+| Flag | Description |
+|------|-------------|
+| `--setup` | Launch the guided setup wizard |
+| `--cache-session` | Cache STS session credentials and reuse them until they expire |
+| `--auto-mfa` | Automatically run the configured MFA command and obtain credentials without showing the dialog (requires MFA Command mode) |
+| `--single-instance-lock` | Prevent multiple concurrent instances from showing overlapping dialogs; subsequent invocations wait for the first to finish and reuse its cached session |
+
 ## How it works
 
 1. On first run, seeds the dialog with credentials from your existing AWS config (`~/.aws/credentials`, environment variables, SSO, etc.)
@@ -43,6 +54,18 @@ Add this (plus any addtitional config you prefer) to your Claude Code settings (
 7. Outputs temporary credentials as JSON to stdout
 
 On subsequent runs, all fields are pre-populated from the saved config — just enter a fresh MFA code and hit OK. If you use the command mode, the TOTP code is fetched automatically so no manual entry is needed at all.
+
+### Session caching
+
+With `--cache-session` (or `"cacheSession": true` in the config file), temporary credentials are saved to the config file and reused on subsequent runs until they expire. This avoids prompting for MFA on every invocation.
+
+### Auto-MFA
+
+With `--auto-mfa` (or `"autoMfa": true` in the config file), when a MFA command is configured, credentials are obtained automatically without showing the dialog at all. If the command fails or isn't configured, the dialog is shown as a fallback.
+
+### Single-instance lock
+
+With `--single-instance-lock` (or `"singleInstanceLock": true` in the config file), only one instance of the tool will show a dialog at a time. Additional invocations will wait for the first to finish and then reuse its cached session (when session caching is also enabled). The lock file is stored at `~/.config/claude-aws-mfa.lock` and is automatically cleaned up after 2 minutes if the holding process crashes.
 
 ## System requirements
 

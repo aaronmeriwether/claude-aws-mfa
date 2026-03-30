@@ -1,0 +1,118 @@
+name: Release from Changelog
+
+on:
+  push:
+    branches: [main]
+    paths: [CHANGELOG.md]
+
+jobs:
+  detect-release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.parse.outputs.version }}
+      prerelease: ${{ steps.parse.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse latest changelog version
+        id: parse
+        run: |
+          # Extract the first versioned heading: ## [vX.Y.Z...] or ## [vX.Y.Z]
+          VERSION=$(grep -oP '(?<=^## \[)[^\]]+' CHANGELOG.md | head -1)
+
+          if [ -z "$VERSION" ]; then
+            echo "::error::No version heading found in CHANGELOG.md"
+            exit 1
+          fi
+
+          # Must start with v and be valid semver
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9._-]+)?$ ]]; then
+            echo "::error::First changelog heading '$VERSION' is not valid semver with v prefix"
+            exit 1
+          fi
+
+          # Check if this tag already exists
+          if git rev-parse "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION already exists — skipping release."
+            echo "version=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PRERELEASE="false"
+          SEMVER="${VERSION#v}"
+          if [[ "$SEMVER" =~ - ]]; then
+            PRERELEASE="true"
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+          echo "Detected version=$VERSION prerelease=$PRERELEASE"
+
+  release:
+    needs: detect-release
+    if: needs.detect-release.outputs.version != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun test
+
+      - name: Set package version
+        run: |
+          VERSION="${{ needs.detect-release.outputs.version }}"
+          npm version "${VERSION#v}" --no-git-tag-version
+
+      - name: Create Git tag
+        run: |
+          VERSION="${{ needs.detect-release.outputs.version }}"
+          git tag "$VERSION"
+          git push origin "$VERSION"
+
+      - name: Extract changelog entry
+        id: changelog
+        run: |
+          VERSION="${{ needs.detect-release.outputs.version }}"
+          # Extract the body of the first changelog section (between first ## and second ##)
+          BODY=$(awk '/^## \[/{if(found) exit; found=1; next} found' CHANGELOG.md)
+          # Write to file for the release body
+          echo "$BODY" > /tmp/release-body.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ needs.detect-release.outputs.version }}"
+          PRERELEASE="${{ needs.detect-release.outputs.prerelease }}"
+          FLAGS=""
+          if [ "$PRERELEASE" = "true" ]; then
+            FLAGS="--prerelease"
+          fi
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --notes-file /tmp/release-body.md \
+            $FLAGS
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          TAG="latest"
+          if [ "${{ needs.detect-release.outputs.prerelease }}" = "true" ]; then
+            TAG="next"
+          fi
+          npm publish --access public --tag "$TAG"

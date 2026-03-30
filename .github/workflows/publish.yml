@@ -1,5 +1,7 @@
-name: Publish to npm
+name: Publish to npm (legacy)
 
+# Superseded by release.yml which triggers from CHANGELOG.md changes.
+# Kept as a fallback for manually-created GitHub Releases.
 on:
   release:
     types: [published]
