@@ -52,6 +52,9 @@ jobs:
     needs: detect-release
     if: needs.detect-release.outputs.version != ''
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -106,8 +109,6 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           TAG="latest"
           if [ "${{ needs.detect-release.outputs.prerelease }}" = "true" ]; then
