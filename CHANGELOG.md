@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 - Automated release pipeline: releases are now triggered by changelog entries pushed to `main`, replacing the previous manual GitHub Release workflow.
 
+### Fixed
+- Release workflow: use `RELEASE_PAT` via `actions/checkout` token so git credential helper authenticates with the PAT instead of the default `GITHUB_TOKEN` (which cannot bypass tag rulesets).
+
 ### Added
 - CHANGELOG.md to track project changes.
 - Updated README with documentation for new CLI flags and features.
