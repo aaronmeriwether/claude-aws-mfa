@@ -83,6 +83,10 @@ bun run src/index.ts       # run locally
 bun test                   # run tests
 ```
 
+## Releasing
+
+See the [Releasing section of CHANGELOG.md](CHANGELOG.md#releasing) for how to publish new versions.
+
 ## License
 
 MIT
