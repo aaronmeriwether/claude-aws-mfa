@@ -22,19 +22,7 @@ Releases are automated via CI. To create a new release:
 Stable versions (e.g. `v1.2.0`) publish to npm `@latest`. Pre-release versions
 (e.g. `v1.2.0-rc.1`) publish to npm `@next` and create a GitHub pre-release.
 
-## [v1.1.0-rc.2] - Unreleased
-
-### Changed
-- Automated release pipeline: releases are now triggered by changelog entries pushed to `main`, replacing the previous manual GitHub Release workflow.
-
-### Fixed
-- Release workflow: use `RELEASE_PAT` via `actions/checkout` token so git credential helper authenticates with the PAT instead of the default `GITHUB_TOKEN` (which cannot bypass tag rulesets).
-
-### Added
-- CHANGELOG.md to track project changes.
-- Updated README with documentation for new CLI flags and features.
-
-## [v1.1.0-rc.1] - 2026-03-29
+## [v1.1.0] - 2026-06-04
 
 ### Added
 - **Session caching** (`--cache-session`): Cache STS session credentials in the config file and reuse them until they expire, avoiding repeated MFA prompts.
@@ -43,6 +31,14 @@ Stable versions (e.g. `v1.2.0`) publish to npm `@latest`. Pre-release versions
 - New CLI flags with `--no-` negation support for all new options.
 - New config file options: `cacheSession`, `autoMfa`, `singleInstanceLock`.
 - Tests for session caching, lock mechanism, and CLI flag parsing.
+- CHANGELOG.md to track project changes.
+- Updated README with documentation for new CLI flags and features.
+
+### Changed
+- Automated release pipeline: releases are now triggered by changelog entries pushed to `main`, replacing the previous manual GitHub Release workflow.
+
+### Fixed
+- Release workflow: use `RELEASE_PAT` via `actions/checkout` token so git credential helper authenticates with the PAT instead of the default `GITHUB_TOKEN` (which cannot bypass tag rulesets).
 
 ## [v1.0.0] - 2026-03-28
 
