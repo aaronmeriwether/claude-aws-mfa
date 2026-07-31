@@ -106,7 +106,11 @@ jobs:
       - name: Set package version
         run: |
           VERSION="${{ needs.detect-release.outputs.version }}"
-          npm version "${VERSION#v}" --no-git-tag-version
+          # The changelog is the source of truth; package.json's committed
+          # version is only a placeholder. --allow-same-version because
+          # `npm version` treats "already that version" as an error, which
+          # would fail the release whenever the two happen to agree.
+          npm version "${VERSION#v}" --no-git-tag-version --allow-same-version
 
       - name: Extract changelog entry
         id: changelog
