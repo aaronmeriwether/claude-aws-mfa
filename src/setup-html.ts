@@ -1,4 +1,5 @@
 import type { ClaudeSettings } from "./claude-settings";
+import { AUTOSIZE_CSS, AUTOSIZE_SCRIPT } from "./autosize-html";
 
 export const TEXT_FIELDS = [
   { key: "ANTHROPIC_DEFAULT_OPUS_MODEL", label: "Opus Model", placeholder: "global.anthropic.claude-opus-4-6" },
@@ -32,8 +33,9 @@ export function buildSetupHtml(env: Record<string, string>, settings: ClaudeSett
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    padding: 20px; background: #f5f5f7; color: #1d1d1f;
+    background: #f5f5f7; color: #1d1d1f;
   }
+${AUTOSIZE_CSS}
   h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
   .field { margin-bottom: 12px; }
   label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: #1d1d1f; }
@@ -62,6 +64,7 @@ export function buildSetupHtml(env: Record<string, string>, settings: ClaudeSett
 </style>
 </head>
 <body>
+<div id="fit">
   <h2>Claude Code Bedrock Setup</h2>
 
   ${bedrockMfaCheckboxHtml}
@@ -74,8 +77,9 @@ export function buildSetupHtml(env: Record<string, string>, settings: ClaudeSett
     <button onclick="_cancel()">Cancel</button>
     <button class="primary" onclick="save()">Save</button>
   </div>
+</div>
 
-  <script>
+  <script>${AUTOSIZE_SCRIPT}
     const TEXT_FIELDS = ${JSON.stringify(TEXT_FIELDS)};
     const originalEnv = ${JSON.stringify(env)};
     const originalSettings = ${JSON.stringify(settings)};

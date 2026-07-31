@@ -1,4 +1,5 @@
 import { STANDARD_DURATIONS } from "./sts";
+import { AUTOSIZE_CSS, AUTOSIZE_SCRIPT } from "./autosize-html";
 
 export const FIELDS = ["region", "accessKeyId", "secretAccessKey", "mfaArn", "roleArn", "duration", "mfaMode", "mfaCode", "mfaCommand"] as const;
 
@@ -22,8 +23,9 @@ export function buildHtml(config: Record<string, string>) {
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    padding: 20px; background: #f5f5f7; color: #1d1d1f;
+    background: #f5f5f7; color: #1d1d1f;
   }
+${AUTOSIZE_CSS}
   h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
   .field { margin-bottom: 12px; }
   label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; transition: color 0.15s; }
@@ -54,6 +56,7 @@ export function buildHtml(config: Record<string, string>) {
 </style>
 </head>
 <body>
+<div id="fit">
   <h2>Claude AWS MFA</h2>
   <div class="field"><label>AWS Region</label><input id="region" placeholder="us-east-1"></div>
   <div class="field"><label>Access Key ID</label><input id="accessKeyId" type="password" placeholder="AKIA..."></div>
@@ -76,7 +79,8 @@ export function buildHtml(config: Record<string, string>) {
     <button onclick="_cancel()">Cancel</button>
     <button class="primary" onclick="submit()">OK</button>
   </div>
-  <script>
+</div>
+  <script>${AUTOSIZE_SCRIPT}
     document.querySelectorAll("input").forEach(el => {
       el.setAttribute("autocorrect", "off");
       el.setAttribute("autocomplete", "off");
@@ -191,8 +195,9 @@ export function buildErrorHtml(message: string): string {
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    padding: 20px; background: #f5f5f7; color: #1d1d1f;
+    background: #f5f5f7; color: #1d1d1f;
   }
+${AUTOSIZE_CSS}
   h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #ff3b30; }
   p { font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; margin-bottom: 16px; }
   .buttons { display: flex; justify-content: flex-end; }
@@ -204,10 +209,12 @@ export function buildErrorHtml(message: string): string {
 </style>
 </head>
 <body>
+<div id="fit">
   <h2>Authentication Failed</h2>
   <p>${escapeHtml(message)}</p>
   <div class="buttons"><button onclick="_ok()">OK</button></div>
-  <script>
+</div>
+  <script>${AUTOSIZE_SCRIPT}
     document.addEventListener("keydown", e => {
       if (e.key === "Enter" || e.key === "Escape") _ok();
     });

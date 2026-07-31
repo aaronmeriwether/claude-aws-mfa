@@ -8,16 +8,18 @@ on:
 jobs:
   detect-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       version: ${{ steps.parse.outputs.version }}
       prerelease: ${{ steps.parse.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-tags: true
 
       - name: Parse latest changelog version
         id: parse
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Extract the first heading that matches: ## [vX.Y.Z...] - YYYY-MM-DD
           # The date is required — headings without a date are treated as drafts.
@@ -37,24 +39,35 @@ jobs:
             exit 1
           fi
 
-          # Verify the date is today (UTC +/- 12h to accommodate any timezone)
-          ENTRY_DATE=$(echo "$HEADING" | grep -oP '\d{4}-\d{2}-\d{2}')
-          YESTERDAY=$(date -u -d '-12 hours' +%Y-%m-%d)
-          TODAY=$(date -u +%Y-%m-%d)
-          TOMORROW=$(date -u -d '+12 hours' +%Y-%m-%d)
-          if [[ "$ENTRY_DATE" != "$YESTERDAY" && "$ENTRY_DATE" != "$TODAY" && "$ENTRY_DATE" != "$TOMORROW" ]]; then
-            echo "::error::Changelog date $ENTRY_DATE does not match today — expected $YESTERDAY, $TODAY, or $TOMORROW"
-            exit 1
-          fi
-
-          # Check if this tag already exists on the remote
-          if git rev-parse "refs/tags/$VERSION" >/dev/null 2>&1; then
-            echo "Tag $VERSION already exists — skipping release."
+          # Has this already shipped? This check has to come BEFORE any
+          # validation of the entry, because a released entry keeps sitting at
+          # the top of the changelog: every later push to main re-parses it.
+          # Validating first rejects an already-published entry as a malformed
+          # new release — that's what used to turn main red after every release.
+          #
+          # Ask the remote rather than the local clone: checkout doesn't
+          # reliably bring tags down, so a missing local tag proves nothing.
+          if [ -n "$(git ls-remote --tags origin "refs/tags/$VERSION")" ]; then
+            echo "Tag $VERSION already exists — already released, nothing to do."
             echo "version=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Check if a GitHub release already exists
+          # Past this point the entry is genuinely unreleased.
+
+          # The date marks an entry as ready to publish, not as fresh. It may be
+          # in the past: when a release attempt fails (say, on tests) the entry
+          # stays untagged and the next push to main retries it — the documented
+          # behaviour. A date in the future is a typo, though; this workflow has
+          # no way to defer a release, so the entry would publish immediately.
+          ENTRY_DATE=$(echo "$HEADING" | grep -oP '\d{4}-\d{2}-\d{2}')
+          LATEST=$(date -u -d '+12 hours' +%Y-%m-%d)   # +12h so any timezone's "today" is accepted
+          if [[ "$ENTRY_DATE" > "$LATEST" ]]; then
+            echo "::error::Changelog date $ENTRY_DATE for $VERSION is in the future — expected $LATEST or earlier"
+            exit 1
+          fi
+
+          # A release with no tag means an earlier run half-completed.
           if gh release view "$VERSION" >/dev/null 2>&1; then
             echo "::error::GitHub release $VERSION already exists but tag does not — manual cleanup needed"
             exit 1

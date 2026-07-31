@@ -29,8 +29,13 @@ Stable versions (e.g. `v1.2.0`) publish to npm `@latest`. Pre-release versions
 - **Error dialog**: authentication failures (STS or MFA command) now show a native dialog box instead of writing to stderr, since Claude Code doesn't surface a failing command's stderr to the user. Suppressed in `--no-ui` mode, where the error is printed to stderr instead.
 
 ### Changed
+- **Dialogs size themselves to their content.** Every window (main dialog, setup, error) opens small and grows to exactly fit what it renders, instead of using a hardcoded height that had to be guessed and re-guessed whenever the layout changed. Content taller than the cap scrolls rather than being clipped — long error messages are now fully readable. Measured on Linux/WebKitGTK: the main dialog settles at 610px (was hardcoded to 670) and setup at 419px (was 480).
 - `--cache-session`, `--auto-mfa`, and `--single-instance-lock` are now **enabled by default**; use `--no-cache-session`, `--no-auto-mfa`, or `--no-single-instance-lock` to opt out.
 - `--setup` no longer hardcodes an absolute script path into `awsCredentialExport` when the tool is installed and resolvable via `PATH` — it records just the bin name so the setting keeps working across reinstalls/machines. An explicit absolute path is only written as a fallback when running against a local checkout that isn't on `PATH`.
+
+### Fixed
+- **Release workflow no longer fails on every push after a release.** The changelog entry for a shipped version stays at the top of the file, so each later push to `main` re-parsed it — and because the entry was validated *before* the already-released check, it was rejected as a malformed new release (`Changelog date … does not match today`). The already-released check now runs first, and asks the remote for the tag rather than trusting whatever tags `checkout` happened to fetch.
+- A dated-but-unreleased entry is no longer rejected for having a past date, so the documented "re-attempted on each subsequent push to `main`" retry after a failed release actually works. A date in the *future* is still an error, since the workflow has no way to defer a release.
 
 ## [v1.1.0] - 2026-06-04
 

@@ -3,7 +3,11 @@ import { lib } from "webview-bun/src/ffi";
 import { loadClaudeSettings, saveClaudeSettings } from "./claude-settings";
 import { buildSetupHtml } from "./setup-html";
 import { getCredentialExportCommand } from "./credential-export";
+import { START_HEIGHT, bindAutosize } from "./autosize";
 import { version } from "../package.json";
+
+const SETUP_WIDTH = 480;
+const SETUP_MAX_HEIGHT = 720;
 
 export function runSetup(): boolean {
   const settings = loadClaudeSettings();
@@ -11,11 +15,12 @@ export function runSetup(): boolean {
   const credentialExportCmd = getCredentialExportCommand();
 
   const webview = new Webview(false, {
-    width: 480,
-    height: 480,
+    width: SETUP_WIDTH,
+    height: START_HEIGHT,
     hint: SizeHint.FIXED,
   });
   webview.title = `Claude Code Bedrock Setup v${version}`;
+  bindAutosize(webview, SETUP_WIDTH, SETUP_MAX_HEIGHT);
 
   let saved = false;
   const handle = webview.unsafeHandle;
