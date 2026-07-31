@@ -2,7 +2,7 @@ import { describe, test, expect, afterEach } from "bun:test";
 import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { getCredentialExportCommand } from "../src/setup";
+import { getCredentialExportCommand } from "../src/credential-export";
 import { bin } from "../package.json";
 
 const BIN_NAME = Object.keys(bin)[0];
