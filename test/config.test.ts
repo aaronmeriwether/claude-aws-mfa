@@ -2,6 +2,7 @@ import { describe, test, expect } from "bun:test";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, statSync, openSync, closeSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
+import { missingConfigFields } from "../src/config";
 
 describe("config serialization", () => {
   const config = {
@@ -77,6 +78,44 @@ describe("config file I/O", () => {
     } catch {
       // Expected — loadConfig wraps this in try/catch and returns null
     }
+  });
+});
+
+describe("missingConfigFields", () => {
+  const complete = {
+    region: "us-west-2",
+    accessKeyId: "AKIAIOSFODNN7EXAMPLE",
+    secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    mfaArn: "arn:aws:iam::123456789012:mfa/user",
+    roleArn: "arn:aws:iam::123456789012:role/TestRole",
+    mfaMode: "command" as const,
+    mfaCommand: "op item get --otp myitem",
+  };
+
+  test("returns empty array when everything needed for headless operation is present", () => {
+    expect(missingConfigFields(complete)).toEqual([]);
+  });
+
+  test("reports each missing base field by name", () => {
+    const { region, ...rest } = complete;
+    expect(missingConfigFields(rest)).toContain("region");
+  });
+
+  test("requires mfaCommand even if other fields are present", () => {
+    const { mfaCommand, ...rest } = complete;
+    expect(missingConfigFields(rest)).toContain("mfaCommand");
+  });
+
+  test("requires mfaMode to be \"command\", not just mfaCommand set", () => {
+    const codeMode = { ...complete, mfaMode: "code" as const };
+    expect(missingConfigFields(codeMode)).toContain("mfaCommand");
+  });
+
+  test("reports everything missing for an empty config", () => {
+    const missing = missingConfigFields({});
+    expect(missing).toEqual([
+      "region", "accessKeyId", "secretAccessKey", "mfaArn", "roleArn", "mfaCommand",
+    ]);
   });
 });
 

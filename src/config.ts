@@ -177,6 +177,22 @@ export async function waitForLock(): Promise<void> {
   }
 }
 
+/**
+ * Fields required to obtain credentials with no dialog shown at all (used by
+ * --no-ui). A static typed-in MFA code can't be reused headlessly, so
+ * command mode with a configured mfaCommand is mandatory here.
+ */
+export function missingConfigFields(cfg: Partial<Config>): string[] {
+  const missing: string[] = [];
+  if (!cfg.region) missing.push("region");
+  if (!cfg.accessKeyId) missing.push("accessKeyId");
+  if (!cfg.secretAccessKey) missing.push("secretAccessKey");
+  if (!cfg.mfaArn) missing.push("mfaArn");
+  if (!cfg.roleArn) missing.push("roleArn");
+  if (cfg.mfaMode !== "command" || !cfg.mfaCommand) missing.push("mfaCommand");
+  return missing;
+}
+
 export async function seedDefaults(): Promise<Partial<Config>> {
   const defaults: Partial<Config> = {};
   try {

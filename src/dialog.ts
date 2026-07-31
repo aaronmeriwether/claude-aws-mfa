@@ -1,7 +1,7 @@
 import { Webview, SizeHint } from "webview-bun";
 import { lib } from "webview-bun/src/ffi";
 import type { Config } from "./config";
-import { buildHtml } from "./dialog-html";
+import { buildHtml, buildErrorHtml } from "./dialog-html";
 import { version } from "../package.json";
 
 
@@ -74,4 +74,20 @@ export function showDialog(defaults: Partial<Config>): DialogResult | null {
 
   webview.run();
   return result;
+}
+
+/** Show a modal dialog reporting an authentication failure (Claude Code doesn't surface stderr). */
+export function showErrorDialog(message: string): void {
+  const webview = new Webview(false, {
+    width: 420,
+    height: 200,
+    hint: SizeHint.FIXED,
+  });
+  webview.title = `Claude AWS MFA v${version} — Error`;
+
+  const handle = webview.unsafeHandle;
+  webview.bind("_ok", () => lib.symbols.webview_terminate(handle));
+
+  webview.setHTML(buildErrorHtml(message));
+  webview.run();
 }

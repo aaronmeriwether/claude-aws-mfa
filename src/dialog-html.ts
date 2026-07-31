@@ -177,3 +177,41 @@ export function buildHtml(config: Record<string, string>) {
 </body>
 </html>`;
 }
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+export function buildErrorHtml(message: string): string {
+  return /*html*/ `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    padding: 20px; background: #f5f5f7; color: #1d1d1f;
+  }
+  h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #ff3b30; }
+  p { font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; margin-bottom: 16px; }
+  .buttons { display: flex; justify-content: flex-end; }
+  button {
+    padding: 8px 20px; border-radius: 6px; font-size: 14px; cursor: pointer;
+    border: 1px solid #d2d2d7; background: #0071e3; color: #fff;
+  }
+  button:hover { filter: brightness(0.95); }
+</style>
+</head>
+<body>
+  <h2>Authentication Failed</h2>
+  <p>${escapeHtml(message)}</p>
+  <div class="buttons"><button onclick="_ok()">OK</button></div>
+  <script>
+    document.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === "Escape") _ok();
+    });
+  </script>
+</body>
+</html>`;
+}

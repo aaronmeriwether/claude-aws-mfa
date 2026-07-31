@@ -34,14 +34,15 @@ Add this (plus any addtitional config you prefer) to your Claude Code settings (
 
 ## CLI Flags
 
-All flags can be negated with a `--no-` prefix (e.g. `--no-cache-session`). CLI flags override values saved in the config file.
+`--cache-session`, `--auto-mfa`, and `--single-instance-lock` are all **on by default**; use the `--no-` prefix to disable one (e.g. `--no-cache-session`). CLI flags override values saved in the config file.
 
 | Flag | Description |
 |------|-------------|
 | `--setup` | Launch the guided setup wizard |
-| `--cache-session` | Cache STS session credentials and reuse them until they expire |
-| `--auto-mfa` | Automatically run the configured MFA command and obtain credentials without showing the dialog (requires MFA Command mode) |
-| `--single-instance-lock` | Prevent multiple concurrent instances from showing overlapping dialogs; subsequent invocations wait for the first to finish and reuse its cached session |
+| `--cache-session` | Cache STS session credentials and reuse them until they expire (default: on) |
+| `--auto-mfa` | Automatically run the configured MFA command and obtain credentials without showing the dialog, requires MFA Command mode (default: on) |
+| `--single-instance-lock` | Prevent multiple concurrent instances from showing overlapping dialogs; subsequent invocations wait for the first to finish and reuse its cached session (default: on) |
+| `--no-ui` | Never show any GUI dialog. Prints credentials JSON to stdout on success, or an error to stderr on failure — useful for scripting or letting an LLM drive the tool during setup/debugging |
 
 ## How it works
 
@@ -66,6 +67,14 @@ With `--auto-mfa` (or `"autoMfa": true` in the config file), when a MFA command 
 ### Single-instance lock
 
 With `--single-instance-lock` (or `"singleInstanceLock": true` in the config file), only one instance of the tool will show a dialog at a time. Additional invocations will wait for the first to finish and then reuse its cached session (when session caching is also enabled). The lock file is stored at `~/.config/claude-aws-mfa.lock` and is automatically cleaned up after 2 minutes if the holding process crashes.
+
+### Authentication failures
+
+Claude Code does not surface a failing command's stderr to the user, so when MFA/STS authentication fails, the error is shown in a native dialog box instead of being written to stderr.
+
+### `--no-ui` mode
+
+With `--no-ui`, no GUI is ever shown — not even the error dialog above — and the tool never imports the GUI toolkit, so it also works in headless environments without a display. On success, credentials are printed to stdout as usual, keeping stdout cleanly parsable. On failure, an error message is printed to **stderr** instead (e.g. `Missing config: roleArn, mfaCommand` if the config is incomplete, or the underlying STS error if authentication itself failed) and the process exits non-zero. This is intended for scripting and for letting an LLM drive the tool directly while setting up or debugging a configuration — full non-interactive operation requires **MFA Command mode**, since a static "code" mode value can't be re-entered headlessly. The command doesn't need to be a real TOTP generator: for a one-off test or debugging run, `mfaCommand` can simply be `echo <code>` with a fresh, not-yet-used code from your authenticator — it only needs to produce a valid code once.
 
 ## System requirements
 

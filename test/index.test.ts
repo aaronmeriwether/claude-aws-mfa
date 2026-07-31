@@ -11,6 +11,11 @@ describe("parseFlags", () => {
     expect(flags.cacheSession).toBeUndefined();
     expect(flags.autoMfa).toBeUndefined();
     expect(flags.singleInstanceLock).toBeUndefined();
+    expect(flags.noUi).toBe(false);
+  });
+
+  test("parses --no-ui", () => {
+    expect(parseFlags([...base, "--no-ui"]).noUi).toBe(true);
   });
 
   test("parses --setup", () => {

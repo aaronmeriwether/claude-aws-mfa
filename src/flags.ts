@@ -3,6 +3,7 @@ export interface CliFlags {
   cacheSession: boolean | undefined;  // undefined = use config default
   autoMfa: boolean | undefined;
   singleInstanceLock: boolean | undefined;
+  noUi: boolean;
 }
 
 export function parseFlags(argv: string[]): CliFlags {
@@ -11,6 +12,7 @@ export function parseFlags(argv: string[]): CliFlags {
     cacheSession: undefined,
     autoMfa: undefined,
     singleInstanceLock: undefined,
+    noUi: false,
   };
   for (const arg of argv.slice(2)) {
     switch (arg) {
@@ -35,6 +37,9 @@ export function parseFlags(argv: string[]): CliFlags {
         break;
       case "--no-single-instance-lock":
         flags.singleInstanceLock = false;
+        break;
+      case "--no-ui":
+        flags.noUi = true;
         break;
     }
   }

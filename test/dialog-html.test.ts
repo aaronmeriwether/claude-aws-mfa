@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { buildHtml, FIELDS, FIELD_PATTERNS } from "../src/dialog-html";
+import { buildHtml, buildErrorHtml, FIELDS, FIELD_PATTERNS } from "../src/dialog-html";
 
 describe("buildHtml", () => {
   const config = {
@@ -159,5 +159,30 @@ describe("buildHtml", () => {
     const html = buildHtml(config);
     // The validateField function checks currentMode() to skip inactive fields
     expect(html).toContain("currentMode()");
+  });
+});
+
+describe("buildErrorHtml", () => {
+  test("produces valid HTML with doctype", () => {
+    const html = buildErrorHtml("Something went wrong");
+    expect(html).toStartWith("<!DOCTYPE html>");
+    expect(html).toContain("</html>");
+  });
+
+  test("includes the message text", () => {
+    const html = buildErrorHtml("STS AssumeRole failed: AccessDenied");
+    expect(html).toContain("STS AssumeRole failed: AccessDenied");
+  });
+
+  test("has an OK button", () => {
+    const html = buildErrorHtml("error");
+    expect(html).toContain("_ok()");
+  });
+
+  test("escapes HTML special characters in the message", () => {
+    const html = buildErrorHtml('<script>alert(1)</script> & "quoted"');
+    expect(html).not.toContain("<script>alert(1)</script>");
+    expect(html).toContain("&lt;script&gt;");
+    expect(html).toContain("&amp;");
   });
 });

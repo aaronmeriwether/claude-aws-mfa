@@ -22,6 +22,16 @@ Releases are automated via CI. To create a new release:
 Stable versions (e.g. `v1.2.0`) publish to npm `@latest`. Pre-release versions
 (e.g. `v1.2.0-rc.1`) publish to npm `@next` and create a GitHub pre-release.
 
+## [v1.2.0]
+
+### Added
+- **`--no-ui` mode**: skip the GUI entirely and drive the tool from the command line — useful for scripting and for letting an LLM operate the tool during setup/debugging. Prints credentials JSON to stdout on success, keeping stdout cleanly parsable; on failure, prints the underlying error (or names the specific missing config field(s) when the config is incomplete) to stderr. Never imports the GUI toolkit, so it also works in headless environments.
+- **Error dialog**: authentication failures (STS or MFA command) now show a native dialog box instead of writing to stderr, since Claude Code doesn't surface a failing command's stderr to the user. Suppressed in `--no-ui` mode, where the error is printed to stderr instead.
+
+### Changed
+- `--cache-session`, `--auto-mfa`, and `--single-instance-lock` are now **enabled by default**; use `--no-cache-session`, `--no-auto-mfa`, or `--no-single-instance-lock` to opt out.
+- `--setup` no longer hardcodes an absolute script path into `awsCredentialExport` when the tool is installed and resolvable via `PATH` — it records just the bin name so the setting keeps working across reinstalls/machines. An explicit absolute path is only written as a fallback when running against a local checkout that isn't on `PATH`.
+
 ## [v1.1.0] - 2026-06-04
 
 ### Added

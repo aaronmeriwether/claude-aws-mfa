@@ -25,8 +25,7 @@ if (flags.setup) {
 }
 
 import type { CachedSession, Config } from "./config";
-import { loadConfig, saveConfig, seedDefaults, tryAcquireLock, releaseLock, waitForLock } from "./config";
-import { showDialog } from "./dialog";
+import { loadConfig, saveConfig, seedDefaults, tryAcquireLock, releaseLock, waitForLock, missingConfigFields } from "./config";
 import { assumeRoleWithMfa, STANDARD_DURATIONS } from "./sts";
 
 // --- Resolve effective flags (CLI overrides config defaults) ---
@@ -34,9 +33,9 @@ import { assumeRoleWithMfa, STANDARD_DURATIONS } from "./sts";
 const config = loadConfig();
 const defaults: Partial<Config> = config ?? await seedDefaults();
 
-const useCache = flags.cacheSession ?? defaults.cacheSession ?? false;
-const useAutoMfa = flags.autoMfa ?? defaults.autoMfa ?? false;
-const useLock = flags.singleInstanceLock ?? defaults.singleInstanceLock ?? false;
+const useCache = flags.cacheSession ?? defaults.cacheSession ?? true;
+const useAutoMfa = flags.autoMfa ?? defaults.autoMfa ?? true;
+const useLock = flags.singleInstanceLock ?? defaults.singleInstanceLock ?? true;
 
 // --- Helper: check if a cached session is still valid ---
 
@@ -57,59 +56,73 @@ function outputCredentials(session: CachedSession): void {
   }));
 }
 
+// --- Helper: report a failure, respecting --no-ui (dialog is never shown in that mode) ---
+
+async function reportFailure(message: string): Promise<never> {
+  if (flags.noUi) {
+    // stdout is reserved for cleanly-parsable credentials JSON on success.
+    process.stderr.write(`${message}\n`);
+  } else {
+    const { showErrorDialog } = await import("./dialog");
+    showErrorDialog(message);
+  }
+  process.exit(2);
+}
+
 // --- Helper: run MFA command and attempt to obtain credentials without dialog ---
+// Throws (rather than returning null) on failure so callers can decide whether to
+// fall back to the dialog (interactive) or surface the error directly (--no-ui).
 
 async function tryAutoMfa(cfg: Partial<Config>): Promise<CachedSession | null> {
   if (!cfg.mfaCommand || cfg.mfaMode !== "command") return null;
   if (!cfg.region || !cfg.accessKeyId || !cfg.secretAccessKey || !cfg.mfaArn || !cfg.roleArn) return null;
 
-  try {
-    const proc = Bun.spawnSync(["sh", "-c", cfg.mfaCommand]);
-    if (proc.exitCode !== 0) return null;
-    const mfaCode = proc.stdout.toString().trim();
-    if (!mfaCode) return null;
-
-    const { credentials, duration } = await assumeRoleWithMfa({
-      region: cfg.region,
-      accessKeyId: cfg.accessKeyId,
-      secretAccessKey: cfg.secretAccessKey,
-      mfaArn: cfg.mfaArn,
-      roleArn: cfg.roleArn,
-      mfaCode,
-      duration: cfg.duration ?? STANDARD_DURATIONS[0],
-    });
-
-    const session: CachedSession = {
-      AccessKeyId: credentials.AccessKeyId,
-      SecretAccessKey: credentials.SecretAccessKey,
-      SessionToken: credentials.SessionToken,
-      Expiration: credentials.Expiration,
-    };
-
-    saveConfig({
-      region: cfg.region,
-      accessKeyId: cfg.accessKeyId,
-      secretAccessKey: cfg.secretAccessKey,
-      mfaArn: cfg.mfaArn,
-      roleArn: cfg.roleArn,
-      duration,
-      mfaMode: cfg.mfaMode,
-      mfaCommand: cfg.mfaCommand,
-      cacheSession: cfg.cacheSession,
-      autoMfa: cfg.autoMfa,
-      singleInstanceLock: cfg.singleInstanceLock,
-      ...(useCache ? { cachedSession: session } : {}),
-    });
-
-    return session;
-  } catch {
-    return null;
+  const proc = Bun.spawnSync(["sh", "-c", cfg.mfaCommand]);
+  if (proc.exitCode !== 0) {
+    throw new Error(`MFA command failed: ${proc.stderr.toString().trim()}`);
   }
+  const mfaCode = proc.stdout.toString().trim();
+  if (!mfaCode) throw new Error("MFA command produced no output");
+
+  const { credentials, duration } = await assumeRoleWithMfa({
+    region: cfg.region,
+    accessKeyId: cfg.accessKeyId,
+    secretAccessKey: cfg.secretAccessKey,
+    mfaArn: cfg.mfaArn,
+    roleArn: cfg.roleArn,
+    mfaCode,
+    duration: cfg.duration ?? STANDARD_DURATIONS[0],
+  });
+
+  const session: CachedSession = {
+    AccessKeyId: credentials.AccessKeyId,
+    SecretAccessKey: credentials.SecretAccessKey,
+    SessionToken: credentials.SessionToken,
+    Expiration: credentials.Expiration,
+  };
+
+  saveConfig({
+    region: cfg.region,
+    accessKeyId: cfg.accessKeyId,
+    secretAccessKey: cfg.secretAccessKey,
+    mfaArn: cfg.mfaArn,
+    roleArn: cfg.roleArn,
+    duration,
+    mfaMode: cfg.mfaMode,
+    mfaCommand: cfg.mfaCommand,
+    cacheSession: cfg.cacheSession,
+    autoMfa: cfg.autoMfa,
+    singleInstanceLock: cfg.singleInstanceLock,
+    ...(useCache ? { cachedSession: session } : {}),
+  });
+
+  return session;
 }
 
 // --- Helper: show dialog and obtain credentials ---
 
 async function obtainViaDialog(cfg: Partial<Config>): Promise<void> {
+  const { showDialog } = await import("./dialog");
   const result = showDialog(cfg);
   if (!result) {
     process.stderr.write("User cancelled dialog.\n");
@@ -120,8 +133,7 @@ async function obtainViaDialog(cfg: Partial<Config>): Promise<void> {
   if (result.mfaMode === "command") {
     const proc = Bun.spawnSync(["sh", "-c", result.mfaCommand]);
     if (proc.exitCode !== 0) {
-      process.stderr.write(`MFA command failed: ${proc.stderr.toString()}\n`);
-      process.exit(2);
+      throw new Error(`MFA command failed: ${proc.stderr.toString().trim()}`);
     }
     mfaCode = proc.stdout.toString().trim();
   }
@@ -177,14 +189,29 @@ try {
 
   // 2. If auto-mfa is enabled, try to obtain credentials without dialog
   if (useAutoMfa) {
-    const session = await tryAutoMfa(defaults);
-    if (session) {
-      outputCredentials(session);
-      process.exit(0);
+    try {
+      const session = await tryAutoMfa(defaults);
+      if (session) {
+        outputCredentials(session);
+        process.exit(0);
+      }
+    } catch (err) {
+      // In --no-ui mode there's no dialog to fall back to — surface the error directly.
+      if (flags.noUi) throw err;
     }
   }
 
-  // 3. If single-instance-lock is enabled, acquire lock before showing dialog
+  // 3. In --no-ui mode, never show a dialog — report why credentials couldn't be obtained.
+  if (flags.noUi) {
+    const missing = missingConfigFields(defaults);
+    if (missing.length) {
+      await reportFailure(`Missing config: ${missing.join(", ")}`);
+    } else {
+      await reportFailure("Unable to obtain credentials without UI: auto-MFA did not succeed.");
+    }
+  }
+
+  // 4. If single-instance-lock is enabled, acquire lock before showing dialog
   if (useLock) {
     if (!tryAcquireLock()) {
       // Another instance holds the lock — wait for it
@@ -232,6 +259,7 @@ try {
   const masked = raw
     .replace(/(?:AKIA|ASIA)[A-Z0-9]{16}/g, "****")
     .replace(/[A-Za-z0-9/+=]{40}/g, "****");
-  process.stderr.write(`STS AssumeRole failed: ${masked}\n`);
-  process.exit(2);
+  // Claude Code does not surface stderr to the user, so failures are reported via
+  // a dialog box instead (or to stderr in --no-ui mode, keeping stdout parsable).
+  await reportFailure(`Authentication failed: ${masked}`);
 }
