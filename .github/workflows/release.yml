@@ -21,17 +21,23 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Extract the first heading that matches: ## [vX.Y.Z...] - YYYY-MM-DD
-          # The date is required — headings without a date are treated as drafts.
-          HEADING=$(grep -P '^## \[v[^\]]+\]\s+-\s+\d{4}-\d{2}-\d{2}' CHANGELOG.md | head -1)
+          # The topmost `## [...]` heading governs, dated or not.
+          #
+          # Deliberately NOT "the topmost *dated* heading": that made a typo in
+          # the newest entry's date invisible. The heading simply failed to
+          # match, the search fell through to an older entry — or to nothing —
+          # and the run reported success having done nothing at all. A heading
+          # that was meant to release has to fail loudly, not silently.
+          HEADING=$(grep -m1 -P '^## \[' CHANGELOG.md || true)
 
           if [ -z "$HEADING" ]; then
-            echo "No dated release heading found — nothing to release."
+            echo "No version headings in CHANGELOG.md — nothing to release."
             echo "version=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           VERSION=$(echo "$HEADING" | grep -oP '(?<=\[)[^\]]+')
+          REST=$(echo "$HEADING" | sed -E 's/^## \[[^]]*\]//')   # whatever follows the version
 
           # Must be valid semver with v prefix
           if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9._-]+)?$ ]]; then
@@ -55,12 +61,33 @@ jobs:
 
           # Past this point the entry is genuinely unreleased.
 
+          # No date at all is a draft: mergeable to main without releasing.
+          if [ -z "${REST//[[:space:]]/}" ]; then
+            echo "$VERSION has no date — draft entry, nothing to release."
+            echo "version=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Anything else has to be a date. The `-` separator is optional, so
+          # both `] - 2026-07-31` and `] 2026-07-31` release; anything else is a
+          # typo in an entry that was clearly meant to ship, and fails here
+          # rather than being mistaken for a draft and skipped in silence.
+          if [[ ! "$REST" =~ ^[[:space:]]*-?[[:space:]]*([0-9]{4}-[0-9]{2}-[0-9]{2})[[:space:]]*$ ]]; then
+            echo "::error::Changelog heading for $VERSION trails '$(echo "$REST" | xargs)', which is not a YYYY-MM-DD date. Use '## [$VERSION] - YYYY-MM-DD' to release it, or drop the trailing text to keep it a draft."
+            exit 1
+          fi
+          ENTRY_DATE="${BASH_REMATCH[1]}"
+
+          if ! date -u -d "$ENTRY_DATE" >/dev/null 2>&1; then
+            echo "::error::Changelog date $ENTRY_DATE for $VERSION is not a real date"
+            exit 1
+          fi
+
           # The date marks an entry as ready to publish, not as fresh. It may be
           # in the past: when a release attempt fails (say, on tests) the entry
           # stays untagged and the next push to main retries it — the documented
           # behaviour. A date in the future is a typo, though; this workflow has
           # no way to defer a release, so the entry would publish immediately.
-          ENTRY_DATE=$(echo "$HEADING" | grep -oP '\d{4}-\d{2}-\d{2}')
           LATEST=$(date -u -d '+12 hours' +%Y-%m-%d)   # +12h so any timezone's "today" is accepted
           if [[ "$ENTRY_DATE" > "$LATEST" ]]; then
             echo "::error::Changelog date $ENTRY_DATE for $VERSION is in the future — expected $LATEST or earlier"
