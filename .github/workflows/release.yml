@@ -148,13 +148,30 @@ jobs:
           # Write to file for the release body
           echo "$BODY" > /tmp/release-body.md
 
-      - name: Create Git tag
-        run: |
-          VERSION="${{ needs.detect-release.outputs.version }}"
-          git tag "$VERSION"
-          git push origin "$VERSION"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
 
-      - name: Create GitHub Release
+      # npm publish runs BEFORE the tag exists, because detect-release treats
+      # the tag as proof the version shipped. Tagging first meant a failed
+      # publish (bad npm credentials, say) left a tag behind that made every
+      # later run skip the version as already released — the release could
+      # never be retried without deleting the tag by hand. Failing here now
+      # leaves nothing behind, so the next push to main just tries again.
+      - name: Publish to npm
+        run: |
+          TAG="latest"
+          if [ "${{ needs.detect-release.outputs.prerelease }}" = "true" ]; then
+            TAG="next"
+          fi
+          npm publish --access public --tag "$TAG"
+
+      # One step, not two: gh creates the tag at --target when it doesn't
+      # already exist, so there is no window where the tag is visible but the
+      # release isn't — which detect-release would read as "already shipped"
+      # and skip in silence.
+      - name: Create Git tag and GitHub Release
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
@@ -165,19 +182,7 @@ jobs:
             FLAGS="--prerelease"
           fi
           gh release create "$VERSION" \
+            --target "$GITHUB_SHA" \
             --title "$VERSION" \
             --notes-file /tmp/release-body.md \
             $FLAGS
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          registry-url: https://registry.npmjs.org
-
-      - name: Publish to npm
-        run: |
-          TAG="latest"
-          if [ "${{ needs.detect-release.outputs.prerelease }}" = "true" ]; then
-            TAG="next"
-          fi
-          npm publish --access public --tag "$TAG"
