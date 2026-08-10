@@ -1,5 +1,6 @@
 import { STANDARD_DURATIONS } from "./sts";
 import { AUTOSIZE_CSS, AUTOSIZE_SCRIPT } from "./autosize-html";
+import { DEFAULT_PROFILE, type ActiveProfile } from "./config";
 
 export const FIELDS = ["region", "accessKeyId", "secretAccessKey", "mfaArn", "roleArn", "duration", "mfaMode", "mfaCode", "mfaCommand"] as const;
 
@@ -14,7 +15,30 @@ export const FIELD_PATTERNS: Record<string, string> = {
   mfaCommand: "^.+$",
 };
 
-export function buildHtml(config: Record<string, string>) {
+/**
+ * Banner naming the Claude Code profile a dialog belongs to. Always shown, so
+ * its absence never has to be interpreted. The name is never truncated — it is
+ * what tells two dialogs apart — while the path ellipsizes beside it. It sits
+ * inside `#fit`, so the window grows to fit it (see `./autosize`).
+ */
+export const PROFILE_STYLE = /*css*/ `
+  .profile {
+    display: flex; gap: 6px; align-items: baseline;
+    font-size: 12px; color: #6e6e73; background: #e8e8ed;
+    border: 1px solid #d2d2d7; border-radius: 6px;
+    padding: 6px 8px; margin: -8px 0 16px;
+  }
+  .profile b { color: #1d1d1f; font-weight: 600; flex-shrink: 0; }
+  .profile span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+`;
+
+export function profileBanner(profile: ActiveProfile): string {
+  return /*html*/ `<div class="profile" title="${escapeHtml(profile.path)}">Profile <b>${escapeHtml(
+    profile.name,
+  )}</b><span>${escapeHtml(profile.path)}</span></div>`;
+}
+
+export function buildHtml(config: Record<string, string>, profile: ActiveProfile = DEFAULT_PROFILE) {
   return /*html*/ `<!DOCTYPE html>
 <html>
 <head>
@@ -53,11 +77,13 @@ ${AUTOSIZE_CSS}
   }
   .radio-field input[type="text"] { flex: 1; width: 0; min-width: 0; }
   input:disabled { background: #f0f0f0; color: #999; cursor: not-allowed; }
+${PROFILE_STYLE}
 </style>
 </head>
 <body>
 <div id="fit">
   <h2>Claude AWS MFA</h2>
+  ${profileBanner(profile)}
   <div class="field"><label>AWS Region</label><input id="region" placeholder="us-east-1"></div>
   <div class="field"><label>Access Key ID</label><input id="accessKeyId" type="password" placeholder="AKIA..."></div>
   <div class="field"><label>Secret Access Key</label><input id="secretAccessKey" type="password"></div>
@@ -186,7 +212,7 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-export function buildErrorHtml(message: string): string {
+export function buildErrorHtml(message: string, profile: ActiveProfile = DEFAULT_PROFILE): string {
   return /*html*/ `<!DOCTYPE html>
 <html>
 <head>
@@ -206,11 +232,13 @@ ${AUTOSIZE_CSS}
     border: 1px solid #d2d2d7; background: #0071e3; color: #fff;
   }
   button:hover { filter: brightness(0.95); }
+${PROFILE_STYLE}
 </style>
 </head>
 <body>
 <div id="fit">
   <h2>Authentication Failed</h2>
+  ${profileBanner(profile)}
   <p>${escapeHtml(message)}</p>
   <div class="buttons"><button onclick="_ok()">OK</button></div>
 </div>

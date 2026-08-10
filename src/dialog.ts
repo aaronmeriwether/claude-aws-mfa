@@ -1,6 +1,6 @@
 import { Webview, SizeHint } from "webview-bun";
 import { lib } from "webview-bun/src/ffi";
-import type { Config } from "./config";
+import { activeProfile, type Config } from "./config";
 import { buildHtml, buildErrorHtml } from "./dialog-html";
 import { START_HEIGHT, bindAutosize } from "./autosize";
 import { version } from "../package.json";
@@ -10,6 +10,11 @@ const DIALOG_MAX_HEIGHT = 800;
 
 const ERROR_WIDTH = 420;
 const ERROR_MAX_HEIGHT = 640;
+
+/** Window title, naming the profile so stacked dialogs are told apart in the window list too. */
+export function dialogTitle(suffix = ""): string {
+  return `Claude AWS MFA v${version} — ${activeProfile().name}${suffix}`;
+}
 
 
 export interface DialogResult {
@@ -44,7 +49,7 @@ export function showDialog(defaults: Partial<Config>): DialogResult | null {
     height: START_HEIGHT,
     hint: SizeHint.FIXED,
   });
-  webview.title = `Claude AWS MFA v${version}`;
+  webview.title = dialogTitle();
   bindAutosize(webview, DIALOG_WIDTH, DIALOG_MAX_HEIGHT);
 
   let result: DialogResult | null = null;
@@ -78,7 +83,7 @@ export function showDialog(defaults: Partial<Config>): DialogResult | null {
     duration: defaults.duration != null ? String(defaults.duration) : "",
     mfaCommand: defaults.mfaCommand ?? "",
     mfaMode: defaults.mfaMode ?? "code",
-  }));
+  }, activeProfile()));
 
   webview.run();
   return result;
@@ -91,12 +96,12 @@ export function showErrorDialog(message: string): void {
     height: START_HEIGHT,
     hint: SizeHint.FIXED,
   });
-  webview.title = `Claude AWS MFA v${version} — Error`;
+  webview.title = dialogTitle(" — Error");
   bindAutosize(webview, ERROR_WIDTH, ERROR_MAX_HEIGHT);
 
   const handle = webview.unsafeHandle;
   webview.bind("_ok", () => lib.symbols.webview_terminate(handle));
 
-  webview.setHTML(buildErrorHtml(message));
+  webview.setHTML(buildErrorHtml(message, activeProfile()));
   webview.run();
 }

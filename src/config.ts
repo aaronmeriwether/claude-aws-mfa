@@ -1,5 +1,5 @@
 import { homedir } from "os";
-import { join, dirname, resolve } from "path";
+import { join, dirname, resolve, basename } from "path";
 import {
   chmodSync,
   closeSync,
@@ -47,8 +47,12 @@ export interface Config {
  * encodes project dirs (`/` and `.` both become `-`), rather than the basename,
  * which is not unique across config-dir tools.
  *
- * ponytail: the encoding is lossy (`/a/b-c` and `/a-b/c` collide) and unbounded
- * in length; hash the path instead if either ever bites.
+ * DETAIL: the encoding is lossy — `/a/b-c` and `/a-b/c` both yield `-a-b-c` —
+ * and a hash would not be. That is a deliberate trade: these filenames sit in a
+ * directory people read and prune by hand, and approximating the original words
+ * is worth more than closing a collision that requires two config dirs whose
+ * paths differ only in `/` versus `-`. Claude makes the same trade for
+ * `~/.claude/projects`.
  */
 export function profileSuffix(dir = process.env.CLAUDE_CONFIG_DIR): string {
   if (!dir) return "";
@@ -62,6 +66,33 @@ export function profileSuffix(dir = process.env.CLAUDE_CONFIG_DIR): string {
   const real = canonical(dir);
   if (real === canonical(join(homedir(), ".claude"))) return "";
   return real.replace(/[/.]/g, "-");
+}
+
+export interface ActiveProfile {
+  name: string;
+  path: string;
+}
+
+export const DEFAULT_PROFILE: ActiveProfile = { name: "default", path: "~/.claude" };
+
+/**
+ * The profile to name in dialog titles and headings. Because the single-instance
+ * lock is per-profile, two profiles can have a dialog on screen at once, asking
+ * for credentials to different AWS accounts — so which is which has to be
+ * visible.
+ *
+ * The default config dir is named too, rather than left blank: a multi-profile
+ * user facing a single unlabelled dialog cannot tell "this is the default
+ * profile" from "this build doesn't label profiles".
+ */
+export function activeProfile(dir = process.env.CLAUDE_CONFIG_DIR): ActiveProfile {
+  if (!dir || !profileSuffix(dir)) return DEFAULT_PROFILE;
+  const clean = dir.replace(/\/+$/, "");
+  const home = homedir();
+  return {
+    name: basename(clean),
+    path: clean === home || clean.startsWith(home + "/") ? "~" + clean.slice(home.length) : clean,
+  };
 }
 
 const CONFIG_PATH = join(homedir(), ".config", `claude-aws-mfa${profileSuffix()}.json`);

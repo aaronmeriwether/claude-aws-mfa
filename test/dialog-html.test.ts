@@ -1,6 +1,33 @@
 import { describe, test, expect } from "bun:test";
 import { buildHtml, buildErrorHtml, FIELDS, FIELD_PATTERNS } from "../src/dialog-html";
 
+describe("profile banner", () => {
+  const profile = { name: "work", path: "~/.claude-profiles/work" };
+
+  test("is shown for the default profile too, never blank", () => {
+    for (const html of [buildHtml({}), buildErrorHtml("boom")]) {
+      expect(html).toContain('class="profile"');
+      expect(html).toContain("<b>default</b>");
+      expect(html).toContain("~/.claude");
+    }
+  });
+
+  test("names the profile in both the credential and error dialogs", () => {
+    for (const html of [buildHtml({}, profile), buildErrorHtml("boom", profile)]) {
+      expect(html).toContain('class="profile"');
+      expect(html).toContain("<b>work</b>");
+      expect(html).toContain("~/.claude-profiles/work");
+    }
+  });
+
+  test("escapes the profile name and path", () => {
+    const html = buildHtml({}, { name: '<img src=x onerror="alert(1)">', path: "/a&b" });
+    expect(html).not.toContain("<img src=x");
+    expect(html).toContain("&lt;img");
+    expect(html).toContain("/a&amp;b");
+  });
+});
+
 describe("buildHtml", () => {
   const config = {
     region: "us-east-1",

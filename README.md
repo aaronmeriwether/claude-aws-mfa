@@ -63,6 +63,7 @@ Claude Code reads its settings from `$CLAUDE_CONFIG_DIR` when that is set, which
 - `--setup` reads and writes `$CLAUDE_CONFIG_DIR/settings.json`, so a profile can be Bedrock-only while others stay on OAuth.
 - The config file is scoped per profile — `~/.config/claude-aws-mfa<profile>.json`, where `<profile>` is the config dir path encoded the way Claude encodes project dirs (`/` and `.` both become `-`). Different profiles usually mean different AWS accounts, and a shared cached session would hand a profile credentials for the wrong one.
 - The default `~/.claude` gets no suffix, so existing installs keep using `~/.config/claude-aws-mfa.json` unchanged.
+- Because the lock is per profile too, two profiles can have a dialog open at once. Every dialog names its profile — in the window title and in a banner under the heading — so you can tell which AWS account a prompt is asking for. The default config dir is named `default` rather than left unlabelled, so a blank banner never has to be interpreted.
 
 Child processes inherit `CLAUDE_CONFIG_DIR`, so credential export picks up the right profile automatically. `--setup` run from an ordinary shell does not — it configures whatever profile the shell is in, normally the default. To set up a specific profile, export the variable first:
 

@@ -1,5 +1,7 @@
 import type { ClaudeSettings } from "./claude-settings";
 import { AUTOSIZE_CSS, AUTOSIZE_SCRIPT } from "./autosize-html";
+import { DEFAULT_PROFILE, type ActiveProfile } from "./config";
+import { PROFILE_STYLE, profileBanner } from "./dialog-html";
 
 export const TEXT_FIELDS = [
   { key: "ANTHROPIC_DEFAULT_OPUS_MODEL", label: "Opus Model", placeholder: "global.anthropic.claude-opus-4-6" },
@@ -8,7 +10,12 @@ export const TEXT_FIELDS = [
   { key: "CLAUDE_CODE_SUBAGENT_MODEL", label: "Subagent Model", placeholder: "global.anthropic.claude-sonnet-4-6" },
 ] as const;
 
-export function buildSetupHtml(env: Record<string, string>, settings: ClaudeSettings, credentialExportCmd: string) {
+export function buildSetupHtml(
+  env: Record<string, string>,
+  settings: ClaudeSettings,
+  credentialExportCmd: string,
+  profile: ActiveProfile = DEFAULT_PROFILE,
+) {
   const bedrockMfaEnabled = env.CLAUDE_CODE_USE_BEDROCK === "1"
     && settings.awsCredentialExport !== undefined
     && env.AWS_SHARED_CREDENTIALS_FILE === "/dev/null";
@@ -61,11 +68,13 @@ ${AUTOSIZE_CSS}
   }
   button.primary { background: #0071e3; color: #fff; border-color: #0071e3; }
   button:hover { filter: brightness(0.95); }
+${PROFILE_STYLE}
 </style>
 </head>
 <body>
 <div id="fit">
   <h2>Claude Code Bedrock Setup</h2>
+  ${profileBanner(profile)}
 
   ${bedrockMfaCheckboxHtml}
 

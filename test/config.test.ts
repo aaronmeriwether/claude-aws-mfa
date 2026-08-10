@@ -3,7 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync,
 import { join } from "path";
 import { tmpdir } from "os";
 import { homedir } from "os";
-import { missingConfigFields, profileSuffix } from "../src/config";
+import { activeProfile, missingConfigFields, profileSuffix } from "../src/config";
 
 describe("profileSuffix", () => {
   test("is empty for no profile and for the default config dir", () => {
@@ -17,6 +17,28 @@ describe("profileSuffix", () => {
     // basename alone would collide; the full path keeps them distinct
     expect(profileSuffix("/a/work")).not.toBe(profileSuffix("/b/work"));
     expect(profileSuffix("/home/me/.claude-profiles/work")).toBe("-home-me--claude-profiles-work");
+  });
+});
+
+describe("activeProfile", () => {
+  test("names the default config dir rather than returning nothing", () => {
+    // A blank banner would be ambiguous: "default profile" vs "build doesn't label profiles".
+    expect(activeProfile("")).toEqual({ name: "default", path: "~/.claude" });
+    expect(activeProfile(join(homedir(), ".claude"))).toEqual({ name: "default", path: "~/.claude" });
+  });
+
+  test("names the profile and shortens the home prefix", () => {
+    expect(activeProfile(join(homedir(), ".claude-profiles", "work"))).toEqual({
+      name: "work",
+      path: "~/.claude-profiles/work",
+    });
+    expect(activeProfile("/opt/profiles/work")).toEqual({ name: "work", path: "/opt/profiles/work" });
+    expect(activeProfile("/opt/profiles/work/")).toEqual({ name: "work", path: "/opt/profiles/work" });
+  });
+
+  test("does not shorten a sibling directory that merely shares the home prefix", () => {
+    const sibling = homedir() + "-other/work";
+    expect(activeProfile(sibling)?.path).toBe(sibling);
   });
 });
 

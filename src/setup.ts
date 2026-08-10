@@ -1,6 +1,7 @@
 import { Webview, SizeHint } from "webview-bun";
 import { lib } from "webview-bun/src/ffi";
 import { loadClaudeSettings, saveClaudeSettings } from "./claude-settings";
+import { activeProfile } from "./config";
 import { buildSetupHtml } from "./setup-html";
 import { getCredentialExportCommand } from "./credential-export";
 import { START_HEIGHT, bindAutosize } from "./autosize";
@@ -14,12 +15,14 @@ export function runSetup(): boolean {
   const env = (settings.env ?? {}) as Record<string, string>;
   const credentialExportCmd = getCredentialExportCommand();
 
+  // Setup edits $CLAUDE_CONFIG_DIR/settings.json, so name the profile it will land in.
+  const profile = activeProfile();
   const webview = new Webview(false, {
     width: SETUP_WIDTH,
     height: START_HEIGHT,
     hint: SizeHint.FIXED,
   });
-  webview.title = `Claude Code Bedrock Setup v${version}`;
+  webview.title = `Claude Code Bedrock Setup v${version} — ${profile.name}`;
   bindAutosize(webview, SETUP_WIDTH, SETUP_MAX_HEIGHT);
 
   let saved = false;
@@ -59,7 +62,7 @@ export function runSetup(): boolean {
 
   webview.bind("_cancel", () => lib.symbols.webview_terminate(handle));
 
-  webview.setHTML(buildSetupHtml(env, settings, credentialExportCmd));
+  webview.setHTML(buildSetupHtml(env, settings, credentialExportCmd, profile));
   webview.run();
 
   return saved;
