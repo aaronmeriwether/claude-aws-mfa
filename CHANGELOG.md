@@ -22,7 +22,7 @@ Releases are automated via CI. To create a new release:
 Stable versions (e.g. `v1.2.0`) publish to npm `@latest`. Pre-release versions
 (e.g. `v1.2.0-rc.1`) publish to npm `@next` and create a GitHub pre-release.
 
-## [v1.2.0]
+## [v1.2.0] - 2026-08-10
 
 ### Added
 - **Claude Code profile awareness**: `--setup` now reads and writes `$CLAUDE_CONFIG_DIR/settings.json` rather than always `~/.claude/settings.json`, so a tool like [claude-as](https://github.com/p120ph37/claude-as) can give one project a Bedrock profile while others stay on OAuth. The saved config and lock file are scoped to the profile as well (`~/.config/claude-aws-mfa<encoded-config-dir>.json`), since separate profiles generally mean separate AWS accounts and a shared cached session would otherwise hand a profile credentials for the wrong account. The default `~/.claude` is unsuffixed, so existing installs keep their current config file with no migration. Since the lock is per-profile, two profiles can prompt at the same time, so the credential, error, and setup dialogs all name their profile in the window title and in a banner under the heading. The default config dir is named too — to a multi-profile user an unlabelled dialog reads equally as "this is the default profile" and "this build does not label profiles".
