@@ -110,8 +110,16 @@ jobs:
           echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
           echo "Detected version=$VERSION prerelease=$PRERELEASE"
 
-  release:
+  # v1.2.0 shipped while the Test workflow was red: the release ran its own
+  # `bun test` on ubuntu only, so a Windows-only failure never reached it.
+  # Gate on the whole matrix instead, and only when actually releasing.
+  test:
     needs: detect-release
+    if: needs.detect-release.outputs.version != ''
+    uses: ./.github/workflows/test.yml
+
+  release:
+    needs: [detect-release, test]
     if: needs.detect-release.outputs.version != ''
     runs-on: ubuntu-latest
     permissions:
@@ -127,8 +135,6 @@ jobs:
           bun-version: latest
 
       - run: bun install --frozen-lockfile
-
-      - run: bun test
 
       - name: Set package version
         run: |

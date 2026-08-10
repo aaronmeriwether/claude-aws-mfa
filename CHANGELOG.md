@@ -26,6 +26,7 @@ Stable versions (e.g. `v1.2.0`) publish to npm `@latest`. Pre-release versions
 
 ### Fixed
 - **Profile scoping works on Windows.** The per-profile config filename encoded only `/` and `.`, so a Windows `CLAUDE_CONFIG_DIR` kept its backslashes and drive colon — `~/.config/claude-aws-mfa<encoded>.json` then named an NTFS alternate data stream instead of a per-profile file. Separators are normalized and the colon encoded, so a Windows profile gets its own config and lock like everywhere else.
+- **A release can no longer publish over a red build.** The release workflow ran its own `bun test` on Linux only, so v1.2.0 shipped while the Test workflow's Windows leg was failing. It now calls that workflow directly and waits for the full matrix — every OS, GUI tests included — before publishing.
 - Dialog titles on Windows showed the full `C:\Users\you\.claude-profiles\work` instead of `~/.claude-profiles/work`: the home-prefix shortening only recognized `/` as a separator.
 
 ## [v1.2.0] - 2026-08-10
