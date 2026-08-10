@@ -57,15 +57,18 @@ export interface Config {
 export function profileSuffix(dir = process.env.CLAUDE_CONFIG_DIR): string {
   if (!dir) return "";
   const canonical = (p: string) => {
+    let real: string;
     try {
-      return realpathSync(p);
+      real = realpathSync(p);
     } catch {
-      return resolve(p);
+      real = resolve(p);
     }
+    return real.replace(/\\/g, "/");
   };
   const real = canonical(dir);
   if (real === canonical(join(homedir(), ".claude"))) return "";
-  return real.replace(/[/.]/g, "-");
+  // `:` goes too, or a Windows drive letter would make the filename an NTFS stream.
+  return real.replace(/[/.:]/g, "-");
 }
 
 export interface ActiveProfile {
@@ -87,11 +90,12 @@ export const DEFAULT_PROFILE: ActiveProfile = { name: "default", path: "~/.claud
  */
 export function activeProfile(dir = process.env.CLAUDE_CONFIG_DIR): ActiveProfile {
   if (!dir || !profileSuffix(dir)) return DEFAULT_PROFILE;
-  const clean = dir.replace(/\/+$/, "");
+  const clean = dir.replace(/[/\\]+$/, "");
   const home = homedir();
+  const underHome = clean === home || (clean.startsWith(home) && /^[/\\]/.test(clean.slice(home.length)));
   return {
     name: basename(clean),
-    path: clean === home || clean.startsWith(home + "/") ? "~" + clean.slice(home.length) : clean,
+    path: underHome ? ("~" + clean.slice(home.length)).replace(/\\/g, "/") : clean,
   };
 }
 

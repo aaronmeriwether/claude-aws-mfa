@@ -22,6 +22,12 @@ Releases are automated via CI. To create a new release:
 Stable versions (e.g. `v1.2.0`) publish to npm `@latest`. Pre-release versions
 (e.g. `v1.2.0-rc.1`) publish to npm `@next` and create a GitHub pre-release.
 
+## [v1.2.1]
+
+### Fixed
+- **Profile scoping works on Windows.** The per-profile config filename encoded only `/` and `.`, so a Windows `CLAUDE_CONFIG_DIR` kept its backslashes and drive colon — `~/.config/claude-aws-mfa<encoded>.json` then named an NTFS alternate data stream instead of a per-profile file. Separators are normalized and the colon encoded, so a Windows profile gets its own config and lock like everywhere else.
+- Dialog titles on Windows showed the full `C:\Users\you\.claude-profiles\work` instead of `~/.claude-profiles/work`: the home-prefix shortening only recognized `/` as a separator.
+
 ## [v1.2.0] - 2026-08-10
 
 ### Added

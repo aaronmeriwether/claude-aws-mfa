@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, statSync, openSync, closeSync } from "fs";
-import { join } from "path";
+import { join, resolve } from "path";
 import { tmpdir } from "os";
 import { homedir } from "os";
 import { activeProfile, missingConfigFields, profileSuffix } from "../src/config";
@@ -13,10 +13,14 @@ describe("profileSuffix", () => {
   });
 
   test("encodes the full path, not the basename, with / and . both as -", () => {
-    expect(profileSuffix("/opt/profiles/work")).toBe("-opt-profiles-work");
+    // resolve() puts a drive letter in front on Windows: "-" on POSIX, "D--" there.
+    const root = resolve("/").replace(/[/\\:]/g, "-");
+    expect(profileSuffix("/opt/profiles/work")).toBe(root + "opt-profiles-work");
     // basename alone would collide; the full path keeps them distinct
     expect(profileSuffix("/a/work")).not.toBe(profileSuffix("/b/work"));
-    expect(profileSuffix("/home/me/.claude-profiles/work")).toBe("-home-me--claude-profiles-work");
+    expect(profileSuffix("/home/me/.claude-profiles/work")).toBe(root + "home-me--claude-profiles-work");
+    // whatever the platform, the result has to be usable as a filename component
+    expect(profileSuffix("/opt/profiles/work")).not.toMatch(/[/\\:]/);
   });
 });
 
