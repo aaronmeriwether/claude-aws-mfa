@@ -41,7 +41,10 @@ describe.skipIf(!process.env.GUI_TEST)("GUI screenshot tests", () => {
     typeof import("node-screenshots").Window
   > | null = null;
 
+  let titles: string[] = [];
+
   beforeAll(async () => {
+    const start = Date.now();
     windowModule = await import("node-screenshots");
 
     mkdirSync(SCREENSHOT_DIR, { recursive: true });
@@ -52,28 +55,42 @@ describe.skipIf(!process.env.GUI_TEST)("GUI screenshot tests", () => {
       stderr: "inherit",
     });
 
-    // Poll for the window to appear (up to 20s).
-    // Window.all() may throw if the window manager hasn't registered
-    // EWMH atoms yet (e.g. _NET_CLIENT_LIST_STACKING on Linux), so
-    // we catch and retry.
-    const deadline = Date.now() + 20_000;
+    // Poll for the window to appear. The budget is 90s rather than a snug
+    // multiple of the ~8s a warm runner takes: on Windows the first WebView2
+    // launch on a fresh image bootstraps its runtime and user-data folder
+    // before any window exists, which is what made this test flaky in CI.
+    // Waiting longer costs nothing when the window shows up on schedule.
+    //
+    // Window.all() may throw if the window manager hasn't registered EWMH
+    // atoms yet (e.g. _NET_CLIENT_LIST_STACKING on Linux), so we catch and
+    // retry.
+    const deadline = Date.now() + 90_000;
     while (Date.now() < deadline) {
       try {
         const windows = windowModule.Window.all();
-        const match = windows.find((w) => {
-          try { return w.title()?.includes("Claude AWS MFA"); }
-          catch { return false; }
+        titles = windows.map((w) => {
+          try { return w.title() ?? ""; } catch { return ""; }
         });
-        if (match) {
-          foundWindow = match;
+        const i = titles.findIndex((t) => t.includes("Claude AWS MFA"));
+        if (i >= 0) {
+          foundWindow = windows[i]!;
           break;
         }
       } catch {
         // Window.all() not yet available — WM still initializing
       }
+      // A dead launcher will never produce a window; stop and let the
+      // "app launches without error" assertion report the exit code.
+      if (proc.exitCode !== null) break;
       await Bun.sleep(500);
     }
-  }, 30_000);
+    if (!foundWindow) {
+      // Without this a failure is a bare `null` — no way to tell "window never
+      // opened" from "opened under a title we didn't match".
+      console.log(`No matching window after ${Math.round((Date.now() - start) / 1000)}s.`);
+      console.log(`Launcher exitCode: ${proc.exitCode}. Visible titles: ${JSON.stringify(titles)}`);
+    }
+  }, 120_000);
 
   afterAll(() => {
     proc?.kill();
