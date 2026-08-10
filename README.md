@@ -20,7 +20,7 @@ Once you have enabled credential-handling and saved the settings, you can launch
 
 ### Manual Setup
 
-Add this (plus any addtitional config you prefer) to your Claude Code settings (`~/.claude/settings.json`):
+Add this (plus any addtitional config you prefer) to your Claude Code settings (`~/.claude/settings.json`, or `$CLAUDE_CONFIG_DIR/settings.json` if you use per-project profiles):
 
 ```json
 {
@@ -56,6 +56,20 @@ Add this (plus any addtitional config you prefer) to your Claude Code settings (
 
 On subsequent runs, all fields are pre-populated from the saved config — just enter a fresh MFA code and hit OK. If you use the command mode, the TOTP code is fetched automatically so no manual entry is needed at all.
 
+### Claude Code profiles
+
+Claude Code reads its settings from `$CLAUDE_CONFIG_DIR` when that is set, which tools such as [claude-as](https://github.com/p120ph37/claude-as) use to give each project its own credentials. This tool follows suit:
+
+- `--setup` reads and writes `$CLAUDE_CONFIG_DIR/settings.json`, so a profile can be Bedrock-only while others stay on OAuth.
+- The config file is scoped per profile — `~/.config/claude-aws-mfa<profile>.json`, where `<profile>` is the config dir path encoded the way Claude encodes project dirs (`/` and `.` both become `-`). Different profiles usually mean different AWS accounts, and a shared cached session would hand a profile credentials for the wrong one.
+- The default `~/.claude` gets no suffix, so existing installs keep using `~/.config/claude-aws-mfa.json` unchanged.
+
+Child processes inherit `CLAUDE_CONFIG_DIR`, so credential export picks up the right profile automatically. `--setup` run from an ordinary shell does not — it configures whatever profile the shell is in, normally the default. To set up a specific profile, export the variable first:
+
+```bash
+CLAUDE_CONFIG_DIR=~/.claude-profiles/work claude-aws-mfa --setup
+```
+
 ### Session caching
 
 With `--cache-session` (or `"cacheSession": true` in the config file), temporary credentials are saved to the config file and reused on subsequent runs until they expire. This avoids prompting for MFA on every invocation.
@@ -66,7 +80,7 @@ With `--auto-mfa` (or `"autoMfa": true` in the config file), when a MFA command 
 
 ### Single-instance lock
 
-With `--single-instance-lock` (or `"singleInstanceLock": true` in the config file), only one instance of the tool will show a dialog at a time. Additional invocations will wait for the first to finish and then reuse its cached session (when session caching is also enabled). The lock file is stored at `~/.config/claude-aws-mfa.lock` and is automatically cleaned up after 2 minutes if the holding process crashes.
+With `--single-instance-lock` (or `"singleInstanceLock": true` in the config file), only one instance of the tool will show a dialog at a time. Additional invocations will wait for the first to finish and then reuse its cached session (when session caching is also enabled). The lock file is stored alongside the config file (`~/.config/claude-aws-mfa.lock`, per profile) and is automatically cleaned up after 2 minutes if the holding process crashes.
 
 ### Authentication failures
 

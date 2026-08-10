@@ -1,11 +1,12 @@
 import { homedir } from "os";
-import { join, dirname } from "path";
+import { join, dirname, resolve } from "path";
 import {
   chmodSync,
   closeSync,
   mkdirSync,
   openSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -35,7 +36,35 @@ export interface Config {
   cachedSession?: CachedSession;
 }
 
-const CONFIG_PATH = join(homedir(), ".config", "claude-aws-mfa.json");
+/**
+ * Suffix that scopes the config (role ARN, keys, cached STS session) to the
+ * Claude Code profile in use, since separate profiles generally mean separate
+ * AWS accounts — sharing one cached session across them would hand a profile
+ * credentials for the wrong account.
+ *
+ * Empty for the default `~/.claude`, so existing installs keep the unsuffixed
+ * file and need no migration. Otherwise the full path is encoded the way Claude
+ * encodes project dirs (`/` and `.` both become `-`), rather than the basename,
+ * which is not unique across config-dir tools.
+ *
+ * ponytail: the encoding is lossy (`/a/b-c` and `/a-b/c` collide) and unbounded
+ * in length; hash the path instead if either ever bites.
+ */
+export function profileSuffix(dir = process.env.CLAUDE_CONFIG_DIR): string {
+  if (!dir) return "";
+  const canonical = (p: string) => {
+    try {
+      return realpathSync(p);
+    } catch {
+      return resolve(p);
+    }
+  };
+  const real = canonical(dir);
+  if (real === canonical(join(homedir(), ".claude"))) return "";
+  return real.replace(/[/.]/g, "-");
+}
+
+const CONFIG_PATH = join(homedir(), ".config", `claude-aws-mfa${profileSuffix()}.json`);
 
 // Unix file-permission enforcement is skipped on Windows where chmod is a no-op.
 const IS_UNIX = process.platform !== "win32";
@@ -119,7 +148,8 @@ export function saveConfig(config: Config) {
 
 // --- Single-instance lock ---
 
-const LOCK_PATH = join(homedir(), ".config", "claude-aws-mfa.lock");
+// Per-profile too: a profile must not block on, then inherit, another profile's session.
+const LOCK_PATH = join(homedir(), ".config", `claude-aws-mfa${profileSuffix()}.lock`);
 const LOCK_POLL_MS = 500;
 const LOCK_STALE_MS = 120_000; // 2 minutes — assume stale if holder crashed
 

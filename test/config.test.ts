@@ -2,7 +2,23 @@ import { describe, test, expect } from "bun:test";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, statSync, openSync, closeSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { missingConfigFields } from "../src/config";
+import { homedir } from "os";
+import { missingConfigFields, profileSuffix } from "../src/config";
+
+describe("profileSuffix", () => {
+  test("is empty for no profile and for the default config dir", () => {
+    expect(profileSuffix("")).toBe(""); // CLAUDE_CONFIG_DIR unset
+    expect(profileSuffix(join(homedir(), ".claude"))).toBe("");
+    expect(profileSuffix(join(homedir(), ".claude") + "/")).toBe(""); // trailing slash still grandfathered
+  });
+
+  test("encodes the full path, not the basename, with / and . both as -", () => {
+    expect(profileSuffix("/opt/profiles/work")).toBe("-opt-profiles-work");
+    // basename alone would collide; the full path keeps them distinct
+    expect(profileSuffix("/a/work")).not.toBe(profileSuffix("/b/work"));
+    expect(profileSuffix("/home/me/.claude-profiles/work")).toBe("-home-me--claude-profiles-work");
+  });
+});
 
 describe("config serialization", () => {
   const config = {
