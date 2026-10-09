@@ -22,6 +22,11 @@ Releases are automated via CI. To create a new release:
 Stable versions (e.g. `v1.2.0`) publish to npm `@latest`. Pre-release versions
 (e.g. `v1.2.0-rc.1`) publish to npm `@next` and create a GitHub pre-release.
 
+## [v1.2.2] - 2026-10-09
+
+### Changed
+- Changed GitHub username
+
 ## [v1.2.1] - 2026-08-10
 
 ### Fixed
