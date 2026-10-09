@@ -58,7 +58,7 @@ On subsequent runs, all fields are pre-populated from the saved config — just 
 
 ### Claude Code profiles
 
-Claude Code reads its settings from `$CLAUDE_CONFIG_DIR` when that is set, which tools such as [claude-as](https://github.com/p120ph37/claude-as) use to give each project its own credentials. This tool follows suit:
+Claude Code reads its settings from `$CLAUDE_CONFIG_DIR` when that is set, which tools such as [claude-as](https://github.com/aaronmeriwether/claude-as) use to give each project its own credentials. This tool follows suit:
 
 - `--setup` reads and writes `$CLAUDE_CONFIG_DIR/settings.json`, so a profile can be Bedrock-only while others stay on OAuth.
 - The config file is scoped per profile — `~/.config/claude-aws-mfa<profile>.json`, where `<profile>` is the config dir path encoded the way Claude encodes project dirs (`/` and `.` both become `-`). Different profiles usually mean different AWS accounts, and a shared cached session would hand a profile credentials for the wrong one.
