@@ -117,6 +117,12 @@ describe("assumeRoleWithMfa", () => {
     });
   });
 
+  test("passes a custom session name to STS", async () => {
+    await assumeRoleWithMfa({ ...BASE_PARAMS, sessionName: "alice-laptop" });
+
+    expect(capturedCommands[0].RoleSessionName).toBe("alice-laptop");
+  });
+
   test("falls back to shorter duration on duration error", async () => {
     let callCount = 0;
     mockSend = mock(() => {

@@ -1,5 +1,7 @@
 import { STSClient, AssumeRoleCommand } from "@aws-sdk/client-sts";
 
+export const DEFAULT_SESSION_NAME = "claude-aws-mfa";
+
 export const STANDARD_DURATIONS = [129600, 86400, 43200, 28800, 21600, 14400, 7200, 3600];
 
 export function isDurationError(err: unknown): boolean {
@@ -25,6 +27,7 @@ export async function assumeRoleWithMfa(params: {
   roleArn: string;
   mfaCode: string;
   duration: number;
+  sessionName?: string;
 }) {
   const client = new STSClient({
     region: params.region,
@@ -37,7 +40,7 @@ export async function assumeRoleWithMfa(params: {
     try {
       const { Credentials: c } = await client.send(new AssumeRoleCommand({
         RoleArn: params.roleArn,
-        RoleSessionName: "claude-aws-mfa",
+        RoleSessionName: params.sessionName || DEFAULT_SESSION_NAME,
         SerialNumber: params.mfaArn,
         TokenCode: params.mfaCode,
         DurationSeconds: ladder[i],

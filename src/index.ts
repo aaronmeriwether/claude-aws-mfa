@@ -92,6 +92,7 @@ async function tryAutoMfa(cfg: Partial<Config>): Promise<CachedSession | null> {
     roleArn: cfg.roleArn,
     mfaCode,
     duration: cfg.duration ?? STANDARD_DURATIONS[0],
+    sessionName: cfg.sessionName,
   });
 
   const session: CachedSession = {
@@ -108,6 +109,7 @@ async function tryAutoMfa(cfg: Partial<Config>): Promise<CachedSession | null> {
     mfaArn: cfg.mfaArn,
     roleArn: cfg.roleArn,
     duration,
+    sessionName: cfg.sessionName,
     mfaMode: cfg.mfaMode,
     mfaCommand: cfg.mfaCommand,
     cacheSession: cfg.cacheSession,
@@ -146,6 +148,7 @@ async function obtainViaDialog(cfg: Partial<Config>): Promise<void> {
     roleArn: result.roleArn,
     mfaCode,
     duration: parseInt(result.duration, 10) || STANDARD_DURATIONS[0],
+    sessionName: result.sessionName,
   });
 
   const session: CachedSession = {
@@ -162,6 +165,7 @@ async function obtainViaDialog(cfg: Partial<Config>): Promise<void> {
     mfaArn: result.mfaArn,
     roleArn: result.roleArn,
     duration,
+    sessionName: result.sessionName || undefined,
     mfaMode: result.mfaMode,
     mfaCommand: result.mfaCommand || undefined,
     cacheSession: defaults.cacheSession,

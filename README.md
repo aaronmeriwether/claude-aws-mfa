@@ -47,7 +47,7 @@ Add this (plus any addtitional config you prefer) to your Claude Code settings (
 ## How it works
 
 1. On first run, seeds the dialog with credentials from your existing AWS config (`~/.aws/credentials`, environment variables, SSO, etc.)
-2. Shows a native GUI dialog with fields for region, access key, secret key, MFA ARN, role ARN, and session duration
+2. Shows a native GUI dialog with fields for region, access key, secret key, MFA ARN, role ARN, session duration, and STS session name (defaults to `claude-aws-mfa`)
 3. Collects the MFA token — either type a 6-digit code directly, or switch to **MFA Command** mode and provide a shell command that outputs the code (e.g. `op item get --otp …` for 1Password CLI)
 4. Calls `sts:AssumeRole` with the MFA token
 5. If the requested session duration is rejected, automatically retries with shorter durations (12h → 6h → 2h → 1h)

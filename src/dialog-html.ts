@@ -1,8 +1,8 @@
-import { STANDARD_DURATIONS } from "./sts";
+import { DEFAULT_SESSION_NAME, STANDARD_DURATIONS } from "./sts";
 import { AUTOSIZE_CSS, AUTOSIZE_SCRIPT } from "./autosize-html";
 import { DEFAULT_PROFILE, type ActiveProfile } from "./config";
 
-export const FIELDS = ["region", "accessKeyId", "secretAccessKey", "mfaArn", "roleArn", "duration", "mfaMode", "mfaCode", "mfaCommand"] as const;
+export const FIELDS = ["region", "accessKeyId", "secretAccessKey", "mfaArn", "roleArn", "duration", "sessionName", "mfaMode", "mfaCode", "mfaCommand"] as const;
 
 export const FIELD_PATTERNS: Record<string, string> = {
   region: "^[a-z]{2}(-[a-z]+-\\d+)$",
@@ -11,6 +11,8 @@ export const FIELD_PATTERNS: Record<string, string> = {
   mfaArn: "^arn:aws:iam::\\d{12}:mfa/.+$",
   roleArn: "^arn:aws:iam::\\d{12}:role/.+$",
   duration: "^[1-9]\\d*$",
+  // AWS RoleSessionName constraint.
+  sessionName: "^[\\w+=,.@-]{2,64}$",
   mfaCode: "^\\d{6}$",
   mfaCommand: "^.+$",
 };
@@ -90,6 +92,7 @@ ${PROFILE_STYLE}
   <div class="field"><label>MFA Device ARN</label><input id="mfaArn" placeholder="arn:aws:iam::123456789012:mfa/user"></div>
   <div class="field"><label>Role ARN</label><input id="roleArn" placeholder="arn:aws:iam::123456789012:role/MyRole"></div>
   <div class="field"><label>Session Duration (seconds)</label><input id="duration" placeholder="${STANDARD_DURATIONS[0]}"></div>
+  <div class="field"><label>Session Name</label><input id="sessionName" placeholder="${DEFAULT_SESSION_NAME}"></div>
   <hr>
   <div class="radio-field">
     <input type="radio" name="mfaMode" id="mfaModeCode" value="code" checked>
