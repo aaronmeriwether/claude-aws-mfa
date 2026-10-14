@@ -3,6 +3,7 @@ import { lib } from "webview-bun/src/ffi";
 import { activeProfile, type Config } from "./config";
 import { buildHtml, buildErrorHtml } from "./dialog-html";
 import { START_HEIGHT, bindAutosize } from "./autosize";
+import { DEFAULT_SESSION_NAME } from "./sts";
 import { version } from "../package.json";
 
 const DIALOG_WIDTH = 440;
@@ -24,6 +25,7 @@ export interface DialogResult {
   mfaArn: string;
   roleArn: string;
   duration: string;
+  sessionName: string;
   mfaMode: "code" | "command";
   mfaCode: string;
   mfaCommand: string;
@@ -81,6 +83,7 @@ export function showDialog(defaults: Partial<Config>): DialogResult | null {
     mfaArn: defaults.mfaArn ?? "",
     roleArn: defaults.roleArn ?? "",
     duration: defaults.duration != null ? String(defaults.duration) : "",
+    sessionName: defaults.sessionName ?? DEFAULT_SESSION_NAME,
     mfaCommand: defaults.mfaCommand ?? "",
     mfaMode: defaults.mfaMode ?? "code",
   }, activeProfile()));

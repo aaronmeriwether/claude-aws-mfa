@@ -103,7 +103,7 @@ describe("buildHtml", () => {
   test("FIELDS list matches expected form fields", () => {
     expect(FIELDS).toEqual([
       "region", "accessKeyId", "secretAccessKey",
-      "mfaArn", "roleArn", "duration", "mfaMode", "mfaCode", "mfaCommand",
+      "mfaArn", "roleArn", "duration", "sessionName", "mfaMode", "mfaCode", "mfaCommand",
     ]);
   });
 
@@ -128,6 +128,7 @@ describe("buildHtml", () => {
       mfaArn: "arn:aws:iam::123456789012:mfa/user",
       roleArn: "arn:aws:iam::123456789012:role/TestRole",
       duration: "43200",
+      sessionName: "claude-aws-mfa",
       mfaCode: "123456",
       mfaCommand: "op item get --otp myitem",
     };
@@ -138,6 +139,7 @@ describe("buildHtml", () => {
       mfaArn: "not-an-arn",
       roleArn: "not-an-arn",
       duration: "abc",
+      sessionName: "has spaces",
       mfaCode: "12",
       mfaCommand: "",
     };

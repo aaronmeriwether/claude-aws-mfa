@@ -28,6 +28,7 @@ export interface Config {
   mfaArn: string;
   roleArn: string;
   duration: number;
+  sessionName?: string;
   mfaMode?: "code" | "command";
   mfaCommand?: string;
   cacheSession?: boolean;
