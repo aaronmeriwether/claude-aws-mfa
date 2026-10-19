@@ -260,10 +260,9 @@ export function missingConfigFields(cfg: Partial<Config>): string[] {
 }
 
 /**
- * Region for AWS calls: AWS_REGION, when set, overrides the configured one.
- * Claude Code passes its settings `env` to this tool, so this keeps STS and
- * `--usage` in the same region Claude Code sends Bedrock requests to. Only
- * applied at call time — the config keeps the region entered in the dialog.
+ * Region for AWS calls: AWS_REGION, when set, overrides the configured one, as
+ * it does for the AWS SDK and CLI. Only applied at call time — the config keeps
+ * the region entered in the dialog.
  */
 export function effectiveRegion(configured?: string): string | undefined {
   return process.env.AWS_REGION || configured || undefined;

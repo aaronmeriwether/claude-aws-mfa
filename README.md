@@ -58,7 +58,7 @@ Add this (plus any addtitional config you prefer) to your Claude Code settings (
 6. Saves configuration (including MFA mode and command) to `~/.config/claude-aws-mfa.json` (mode 0600) for subsequent runs
 7. Outputs temporary credentials as JSON to stdout
 
-If `AWS_REGION` is set, it overrides the configured region for all AWS calls (STS and `--usage`); the saved config is left unchanged. Claude Code passes the `env` from its settings to this tool, so setting `AWS_REGION` there keeps the tool in the same region Claude Code sends Bedrock requests to.
+If `AWS_REGION` is set, it overrides the configured region for all AWS calls (STS and `--usage`); the saved config is left unchanged. When Claude Code runs the tool, it sees whatever `AWS_REGION` Claude Code's environment has (including one set in `settings.json`); when you run it yourself from a shell, it only sees your shell's.
 
 On subsequent runs, all fields are pre-populated from the saved config — just enter a fresh MFA code and hit OK. If you use the command mode, the TOTP code is fetched automatically so no manual entry is needed at all.
 
@@ -121,7 +121,7 @@ claude-aws-mfa --usage='my-role/*'                         # quote * so the shel
 
 Only callers that assumed a role are counted; calls made directly with IAM user keys never match.
 
-Only one region is queried: `AWS_REGION` if set, otherwise the configured region. Cross-region inference calls (`us.`/`global.` profiles) are logged in the region they were made from, so they are included. The data comes from Bedrock [model invocation logs](https://docs.aws.amazon.com/bedrock/latest/userguide/model-invocation-logging.html), so invocation logging to CloudWatch Logs must be enabled in the account and region. The querying credentials need `bedrock:GetModelInvocationLoggingConfiguration`, `logs:StartQuery` and `logs:GetQueryResults`. Without `--profile`, credentials are obtained exactly as for Claude Code (cached session, auto-MFA, or the dialog). Errors go to stderr.
+Only one region is queried: `AWS_REGION` if set, otherwise the configured region. If your Claude Code `settings.json` sets `AWS_REGION` to something other than the configured region, pass the same value when running `--usage` from a shell (`AWS_REGION=eu-west-1 claude-aws-mfa --usage`) to report on the region Claude Code uses. Cross-region inference calls (`us.`/`global.` profiles) are logged in the region they were made from, so they are included. The data comes from Bedrock [model invocation logs](https://docs.aws.amazon.com/bedrock/latest/userguide/model-invocation-logging.html), so invocation logging to CloudWatch Logs must be enabled in the account and region. The querying credentials need `bedrock:GetModelInvocationLoggingConfiguration`, `logs:StartQuery` and `logs:GetQueryResults`. Without `--profile`, credentials are obtained exactly as for Claude Code (cached session, auto-MFA, or the dialog). Errors go to stderr.
 
 Costs are estimated from AWS's public [Price List](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/price-changes.html) for the region (no extra permissions needed), at current base on-demand rates — `us.`/`eu.` cross-region profiles at their geo price, `global.` at the global price. They exclude negotiated discounts and the long-context and 1-hour-cache-write surcharges, which the aggregated logs can't distinguish, so treat them as an estimate rather than your bill. If prices can't be fetched, token counts are still printed.
 

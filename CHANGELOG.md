@@ -25,7 +25,7 @@ Stable versions (e.g. `v1.2.0`) publish to npm `@latest`. Pre-release versions
 ## [v1.5.0] - 2026-10-19
 
 ### Added
-- `AWS_REGION`, when set, overrides the configured region for STS and `--usage`. Claude Code passes its settings `env` to this tool, so `--usage` queries the region Claude Code actually uses for Bedrock.
+- `AWS_REGION`, when set, overrides the configured region for STS and `--usage`, so a report can target a region other than the one in the config.
 
 ## [v1.4.0] - 2026-10-19
 
