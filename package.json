@@ -7,7 +7,7 @@
     "claude-aws-mfa": "./src/index.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "^1.4.3",
     "node-screenshots": "^0.2.8"
   },
   "peerDependencies": {
@@ -16,7 +16,7 @@
   "dependencies": {
     "@aws-sdk/client-bedrock": "^3.1152.0",
     "@aws-sdk/client-cloudwatch-logs": "^3.1152.0",
-    "@aws-sdk/client-sts": "^3.998.0",
+    "@aws-sdk/client-sts": "^3.1152.0",
     "webview-bun": "^2.4.0"
   }
 }
