@@ -1,6 +1,7 @@
 import { BedrockClient, GetModelInvocationLoggingConfigurationCommand } from "@aws-sdk/client-bedrock";
 import { CloudWatchLogsClient, StartQueryCommand, GetQueryResultsCommand } from "@aws-sdk/client-cloudwatch-logs";
 import { DEFAULT_SESSION_NAME } from "./sts";
+import { effectiveRegion } from "./config";
 
 const COLUMNS = ["requests", "inputTokens", "cacheReadTokens", "cacheWriteTokens", "outputTokens"] as const;
 const HEADERS = ["Model", "Requests", "Input", "Cache read", "Cache write", "Output"];
@@ -190,7 +191,7 @@ export async function printUsage(opts: {
   const { start, end } = usageRange(opts.from, opts.to);
   const specText = opts.spec || DEFAULT_SESSION_NAME;
   const spec = parseUsageSpec(specText);
-  const clientConfig = { region: opts.region || undefined, credentials: opts.credentials, profile: opts.profile };
+  const clientConfig = { region: effectiveRegion(opts.region), credentials: opts.credentials, profile: opts.profile };
 
   const bedrock = new BedrockClient(clientConfig);
   // Prices are best-effort: token counts are still worth printing without them.

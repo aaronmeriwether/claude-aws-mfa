@@ -1,4 +1,5 @@
 import { STSClient, AssumeRoleCommand } from "@aws-sdk/client-sts";
+import { effectiveRegion } from "./config";
 
 export const DEFAULT_SESSION_NAME = "claude-aws-mfa";
 
@@ -30,7 +31,7 @@ export async function assumeRoleWithMfa(params: {
   sessionName?: string;
 }) {
   const client = new STSClient({
-    region: params.region,
+    region: effectiveRegion(params.region),
     credentials: { accessKeyId: params.accessKeyId, secretAccessKey: params.secretAccessKey },
   });
 

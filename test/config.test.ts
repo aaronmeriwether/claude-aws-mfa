@@ -3,7 +3,25 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync,
 import { join, resolve } from "path";
 import { tmpdir } from "os";
 import { homedir } from "os";
-import { activeProfile, missingConfigFields, profileSuffix } from "../src/config";
+import { activeProfile, effectiveRegion, missingConfigFields, profileSuffix } from "../src/config";
+
+describe("effectiveRegion", () => {
+  test("AWS_REGION overrides the configured region", () => {
+    const saved = process.env.AWS_REGION;
+    try {
+      delete process.env.AWS_REGION;
+      expect(effectiveRegion("us-west-2")).toBe("us-west-2");
+      expect(effectiveRegion(undefined)).toBeUndefined();
+      process.env.AWS_REGION = "eu-central-1";
+      expect(effectiveRegion("us-west-2")).toBe("eu-central-1");
+      process.env.AWS_REGION = "";
+      expect(effectiveRegion("us-west-2")).toBe("us-west-2");
+    } finally {
+      if (saved === undefined) delete process.env.AWS_REGION;
+      else process.env.AWS_REGION = saved;
+    }
+  });
+});
 
 describe("profileSuffix", () => {
   test("is empty for no profile and for the default config dir", () => {

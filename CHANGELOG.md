@@ -22,6 +22,11 @@ Releases are automated via CI. To create a new release:
 Stable versions (e.g. `v1.2.0`) publish to npm `@latest`. Pre-release versions
 (e.g. `v1.2.0-rc.1`) publish to npm `@next` and create a GitHub pre-release.
 
+## [v1.5.0] - 2026-10-19
+
+### Added
+- `AWS_REGION`, when set, overrides the configured region for STS and `--usage`. Claude Code passes its settings `env` to this tool, so `--usage` queries the region Claude Code actually uses for Bedrock.
+
 ## [v1.4.0] - 2026-10-19
 
 ### Added
