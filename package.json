@@ -14,6 +14,8 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock": "^3.1152.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.1152.0",
     "@aws-sdk/client-sts": "^3.998.0",
     "webview-bun": "^2.4.0"
   }

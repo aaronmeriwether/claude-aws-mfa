@@ -22,6 +22,12 @@ Releases are automated via CI. To create a new release:
 Stable versions (e.g. `v1.2.0`) publish to npm `@latest`. Pre-release versions
 (e.g. `v1.2.0-rc.1`) publish to npm `@next` and create a GitHub pre-release.
 
+## [v1.4.0] - 2026-10-19
+
+### Added
+- `--help` / `-h` prints a summary of the CLI options.
+- `--usage[=[<role>/]<session>]` prints Bedrock token usage from model invocation logs for a session name (default: the one in the config), optionally under one role, or itemized per role or session with `*` (`--usage='my-role/*'`, `--usage='*'`), with `--from=`/`--to=` for the time range (default: current month) and `--profile=` to query with a different AWS profile. Each model's estimated cost is shown, at current AWS list prices.
+
 ## [v1.3.0] - 2026-10-14
 
 ### Added

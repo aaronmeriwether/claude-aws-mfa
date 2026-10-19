@@ -18,6 +18,12 @@ describe("parseFlags", () => {
     expect(parseFlags([...base, "--no-ui"]).noUi).toBe(true);
   });
 
+  test("parses --help and -h", () => {
+    expect(parseFlags(base).help).toBe(false);
+    expect(parseFlags([...base, "--help"]).help).toBe(true);
+    expect(parseFlags([...base, "-h"]).help).toBe(true);
+  });
+
   test("parses --setup", () => {
     expect(parseFlags([...base, "--setup"]).setup).toBe(true);
     expect(parseFlags([...base, "setup"]).setup).toBe(true);
