@@ -39,9 +39,13 @@ Add this (plus any addtitional config you prefer) to your Claude Code settings (
 | Flag | Description |
 |------|-------------|
 | `--setup` | Launch the guided setup wizard |
+| `-h`, `--help` | Show usage help |
 | `--cache-session` | Cache STS session credentials and reuse them until they expire (default: on) |
 | `--auto-mfa` | Automatically run the configured MFA command and obtain credentials without showing the dialog, requires MFA Command mode (default: on) |
 | `--single-instance-lock` | Prevent multiple concurrent instances from showing overlapping dialogs; subsequent invocations wait for the first to finish and reuse its cached session (default: on) |
+| `--usage[=[<role>/]<session>]` | Print Bedrock token usage for a session name (default: the one in the config), optionally under one role; `*` itemizes instead of credentials (see [Usage report](#usage-report)) |
+| `--profile=<name>` | With `--usage`: query using this AWS profile instead of the tool's own credentials |
+| `--from=<date>` / `--to=<date>` | With `--usage`: time range (default: start of the current month to now; `--to` is exclusive) |
 | `--no-ui` | Never show any GUI dialog. Prints credentials JSON to stdout on success, or an error to stderr on failure — useful for scripting or letting an LLM drive the tool during setup/debugging |
 
 ## How it works
@@ -90,6 +94,34 @@ Claude Code does not surface a failing command's stderr to the user, so when MFA
 ### `--no-ui` mode
 
 With `--no-ui`, no GUI is ever shown — not even the error dialog above — and the tool never imports the GUI toolkit, so it also works in headless environments without a display. On success, credentials are printed to stdout as usual, keeping stdout cleanly parsable. On failure, an error message is printed to **stderr** instead (e.g. `Missing config: roleArn, mfaCommand` if the config is incomplete, or the underlying STS error if authentication itself failed) and the process exits non-zero. This is intended for scripting and for letting an LLM drive the tool directly while setting up or debugging a configuration — full non-interactive operation requires **MFA Command mode**, since a static "code" mode value can't be re-entered headlessly. The command doesn't need to be a real TOTP generator: for a one-off test or debugging run, `mfaCommand` can simply be `echo <code>` with a fresh, not-yet-used code from your authenticator — it only needs to produce a valid code once.
+
+### Usage report
+
+`claude-aws-mfa --usage` prints per-model request and token counts (input, cache read/write, output), with an estimated cost, for every Bedrock call made under the configured STS session name.
+
+`--usage=` takes `[<role>/]<session>` to choose whose usage to report. Either part can be `*`, which gives one row per role or session (all models merged) instead of one row per model:
+
+| Value | Reports |
+|-------|---------|
+| *(none)* | The session name from the config, any role, per model |
+| `claude-aws-mfa` | That session name under any role, per model |
+| `my-role/claude-aws-mfa` | That session of role `my-role`, per model |
+| `my-role/*` | Each session of role `my-role` |
+| `*` | Each role (its sessions merged) |
+| `*/*` | Each role and session pair |
+
+```bash
+claude-aws-mfa --usage                                   # this month, using the tool's own role session
+claude-aws-mfa --usage --from=2026-09-01 --to=2026-10-01 # September
+claude-aws-mfa --usage --profile=billing                 # query with a different AWS profile
+claude-aws-mfa --usage='my-role/*'                         # quote * so the shell doesn't expand it
+```
+
+Only callers that assumed a role are counted; calls made directly with IAM user keys never match.
+
+The data comes from Bedrock [model invocation logs](https://docs.aws.amazon.com/bedrock/latest/userguide/model-invocation-logging.html), so invocation logging to CloudWatch Logs must be enabled in the account and region. The querying credentials need `bedrock:GetModelInvocationLoggingConfiguration`, `logs:StartQuery` and `logs:GetQueryResults`. Without `--profile`, credentials are obtained exactly as for Claude Code (cached session, auto-MFA, or the dialog). Errors go to stderr.
+
+Costs are estimated from AWS's public [Price List](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/price-changes.html) for the region (no extra permissions needed), at current base on-demand rates — `us.`/`eu.` cross-region profiles at their geo price, `global.` at the global price. They exclude negotiated discounts and the long-context and 1-hour-cache-write surcharges, which the aggregated logs can't distinguish, so treat them as an estimate rather than your bill. If prices can't be fetched, token counts are still printed.
 
 ## System requirements
 

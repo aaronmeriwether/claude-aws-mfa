@@ -15,9 +15,14 @@ if (process.platform === "linux" && !process.env.WEBKIT_DISABLE_SANDBOX_THIS_IS_
   process.exit(proc.exitCode);
 }
 
-import { parseFlags } from "./flags";
+import { parseFlags, HELP } from "./flags";
 
 const flags = parseFlags(process.argv);
+
+if (flags.help) {
+  console.log(HELP);
+  process.exit(0);
+}
 
 if (flags.setup) {
   const { runSetup } = await import("./setup");
@@ -44,9 +49,31 @@ function isSessionValid(session: CachedSession | undefined): session is CachedSe
   return new Date(session.Expiration).getTime() > Date.now();
 }
 
-// --- Helper: output credentials and save config ---
+// --- Helper: query Bedrock usage (--usage); a CLI command, so errors go to stderr ---
 
-function outputCredentials(session: CachedSession): void {
+async function runUsage(opts: Omit<Parameters<typeof import("./usage").printUsage>[0], "spec" | "from" | "to">): Promise<never> {
+  const { printUsage } = await import("./usage");
+  try {
+    await printUsage({ ...opts, spec: flags.usageSpec ?? defaults.sessionName, from: flags.from, to: flags.to });
+    process.exit(0);
+  } catch (err) {
+    process.stderr.write(`Usage query failed: ${err instanceof Error ? err.message : err}\n`);
+    process.exit(1);
+  }
+}
+
+// With --profile, the query uses that AWS profile instead of this tool's own credentials.
+if (flags.usage && flags.profile) await runUsage({ region: defaults.region, profile: flags.profile });
+
+// --- Helper: output credentials (or, with --usage, use them for the usage query) ---
+
+async function outputCredentials(session: CachedSession): Promise<void> {
+  if (flags.usage) {
+    await runUsage({
+      region: defaults.region,
+      credentials: { accessKeyId: session.AccessKeyId, secretAccessKey: session.SecretAccessKey, sessionToken: session.SessionToken },
+    });
+  }
   console.log(JSON.stringify({
     Credentials: {
       AccessKeyId: session.AccessKeyId,
@@ -59,7 +86,7 @@ function outputCredentials(session: CachedSession): void {
 // --- Helper: report a failure, respecting --no-ui (dialog is never shown in that mode) ---
 
 async function reportFailure(message: string): Promise<never> {
-  if (flags.noUi) {
+  if (flags.noUi || flags.usage) {
     // stdout is reserved for cleanly-parsable credentials JSON on success.
     process.stderr.write(`${message}\n`);
   } else {
@@ -174,7 +201,7 @@ async function obtainViaDialog(cfg: Partial<Config>): Promise<void> {
     ...(useCache ? { cachedSession: session } : {}),
   });
 
-  outputCredentials(session);
+  await outputCredentials(session);
 }
 
 // --- Main flow ---
@@ -184,7 +211,7 @@ try {
   if (useCache && config?.cachedSession) {
     if (isSessionValid(config.cachedSession)) {
       // Return cached credentials without showing dialog
-      outputCredentials(config.cachedSession);
+      await outputCredentials(config.cachedSession);
       process.exit(0);
     }
     // Expired — clear the cached session
@@ -196,7 +223,7 @@ try {
     try {
       const session = await tryAutoMfa(defaults);
       if (session) {
-        outputCredentials(session);
+        await outputCredentials(session);
         process.exit(0);
       }
     } catch (err) {
@@ -226,7 +253,7 @@ try {
       if (useCache) {
         const freshConfig = loadConfig();
         if (freshConfig?.cachedSession && isSessionValid(freshConfig.cachedSession)) {
-          outputCredentials(freshConfig.cachedSession);
+          await outputCredentials(freshConfig.cachedSession);
           process.exit(0);
         }
       }
@@ -238,7 +265,7 @@ try {
         if (useCache) {
           const freshConfig = loadConfig();
           if (freshConfig?.cachedSession && isSessionValid(freshConfig.cachedSession)) {
-            outputCredentials(freshConfig.cachedSession);
+            await outputCredentials(freshConfig.cachedSession);
             process.exit(0);
           }
         }
